@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ingreso a Playa - Pedido de Turno</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col justify-center p-4">
+    <div class="max-w-md mx-auto bg-white rounded-xl shadow-md p-6 w-full">
+        <h1 class="text-2xl font-bold text-gray-800 text-center mb-1">Ingreso a Playa</h1>
+        <p class="text-xs text-gray-500 text-center mb-4">Complete sus datos o adjunte su Carta de Porte</p>
+
+        <!-- Seccion Escaneo QR -->
+        <div id="sectionScanner" class="mb-4">
+            <button type="button" id="btnCamara" onclick="toggleCamara()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg flex items-center justify-center space-x-2 shadow">
+                <span>📷 ESCANEAR QR CON LA CÁMARA</span>
+            </button>
+            
+            <div id="camContainer" class="hidden mt-3 rounded-lg overflow-hidden border-2 border-indigo-500 relative bg-black">
+                <video id="video" class="w-full h-64 object-cover" playsinline></video>
+                <canvas id="canvas" class="hidden"></canvas>
+                
+                <div id="scanStatus" class="absolute bottom-2 left-2 right-2 bg-black/70 text-white text-center text-xs py-1 px-2 rounded hidden">
+                    Encuadre el código QR...
+                </div>
+
+                <div class="absolute top-2 right-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded cursor-pointer z-10" onclick="detenerCamara()">Cerrar ✖</div>
+            </div>
+        </div>
+
+        <form id="formTurno" class="space-y-3">
+            <!-- Adjuntar archivo PDF o Imagen -->
+            <div class="bg-blue-50 border-2 border-dashed border-blue-300 rounded-lg p-3 text-center">
+                <label class="block text-xs font-bold text-blue-900 uppercase mb-1">📄 Adjuntar PDF o Foto de CPE</label>
+                <input type="file" id="archivo_adjunto" accept="image/*,application/pdf" onchange="procesarArchivoAdjunto(this)" class="w-full text-xs text-gray-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-bold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer">
+                <span id="cargandoArchivo" class="text-xs text-blue-700 font-bold block mt-1 hidden">⏳ Leyendo Carta de Porte...</span>
+            </div>
+
+            <!-- Tipo de Operacion -->
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Tipo de Operación</label>
+                <div class="grid grid-cols-2 gap-2">
+                    <button type="button" onclick="setOperacion('DESCARGA')" id="btnDescarga" class="py-2.5 px-4 rounded-lg font-bold border-2 border-blue-600 bg-blue-600 text-white text-center text-sm">DESCARGA</button>
+                    <button type="button" onclick="setOperacion('CARGA')" id="btnCarga" class="py-2.5 px-4 rounded-lg font-bold border-2 border-gray-200 bg-white text-gray-700 text-center text-sm">CARGA (TARA)</button>
+                </div>
+            </div>
+
+            <!-- CTG / CPE -->
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">N° CTG / CPE</label>
+                <div class="flex gap-2">
+                    <input type="text" id="detalles_doc" placeholder="10134080762" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm font-mono font-bold">
+                    <button type="button" onclick="buscarDatosOficiales()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 rounded-lg flex items-center shrink-0">
+                        🔍 AFIP
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tipo Documento -->
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Documento</label>
+                <select id="tipo_documento" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm">
+                    <option value="CARTA_DE_PORTE">Carta de Porte Electrónica (CPE)</option>
+                    <option value="REMITO">Remito</option>
+                </select>
+            </div>
+
+            <!-- Datos del Vehiculo -->
+            <div class="grid grid-cols-2 gap-2">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase">Patente Chasis *</label>
+                    <input type="text" id="dominio_chasis" required placeholder="ROR484" class="w-full p-2.5 border border-gray-300 rounded-lg uppercase font-mono font-bold text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase">Patente Acoplado</label>
+                    <input type="text" id="dominio_acoplado" placeholder="AB419RG" class="w-full p-2.5 border border-gray-300 rounded-lg uppercase font-mono text-sm">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-gray-500 uppercase">Nombre y Apellido Chofer *</label>
+                <input type="text" id="chofer_nombre" required placeholder="Ej: SANCHEZ EDUARDO ARMANDO" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm">
+            </div>
+
+            <!-- Campo Celular / WhatsApp Resaltado -->
+            <div id="contenedorTelefono" class="p-2.5 bg-amber-50 rounded-xl border-2 border-amber-400 transition-all">
+                <label class="block text-xs font-bold text-amber-900 uppercase mb-1 flex items-center justify-between">
+                    <span>📲 WhatsApp / Celular *</span>
+                    <span class="text-[10px] bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded font-extrabold animate-pulse">COMPLETAR AQUÍ</span>
+                </label>
+                <input type="tel" id="chofer_telefono" required placeholder="Ej: 2314123456" class="w-full p-2.5 border-2 border-amber-400 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none font-bold bg-white">
+            </div>
+
+            <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-lg text-base shadow-lg transition mt-2">
+                SOLICITAR TURNO
+            </button>
+        </form>
+
+        <!-- Ticket Confirmacion -->
+        <div id="ticketSuccess" class="hidden text-center py-6">
+            <div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold">✓</div>
+            <h2 class="text-xl font-bold text-gray-800">¡Turno Registrado!</h2>
+            <div id="codigoTurno" class="text-4xl font-extrabold text-blue-600 my-4">---</div>
+            <p class="text-sm text-gray-600">Aguarde en la playa. Recibirá un mensaje por WhatsApp cuando deba avanzar a la balanza.</p>
+        </div>
+    </div>
+
+    <script>
+        let operacionSeleccionada = 'DESCARGA';
+        let videoStream = null;
+        let scanning = false;
+
+        function setOperacion(op) {
+            operacionSeleccionada = op;
+            if(op === 'DESCARGA') {
+                document.getElementById('btnDescarga').className = "py-2.5 px-4 rounded-lg font-bold border-2 border-blue-600 bg-blue-600 text-white text-center text-sm";
+                document.getElementById('btnCarga').className = "py-2.5 px-4 rounded-lg font-bold border-2 border-gray-200 bg-white text-gray-700 text-center text-sm";
+            } else {
+                document.getElementById('btnCarga').className = "py-2.5 px-4 rounded-lg font-bold border-2 border-blue-600 bg-blue-600 text-white text-center text-sm";
+                document.getElementById('btnDescarga').className = "py-2.5 px-4 rounded-lg font-bold border-2 border-gray-200 bg-white text-gray-700 text-center text-sm";
+            }
+        }
+
+        function enfocarWhatsApp() {
+            const inputTel = document.getElementById('chofer_telefono');
+            inputTel.focus();
+            inputTel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        async function procesarArchivoAdjunto(input) {
+            if (!input.files || input.files.length === 0) return;
+
+            const archivo = input.files[0];
+            const statusLabel = document.getElementById('cargandoArchivo');
+            statusLabel.classList.remove('hidden');
+
+            const formData = new FormData();
+            formData.append('archivo', archivo);
+
+            try {
+                const response = await fetch('/api/procesar-archivo', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const res = await response.json();
+                statusLabel.classList.add('hidden');
+
+                if (res.success && res.datos) {
+                    if (res.datos.ctg) document.getElementById('detalles_doc').value = res.datos.ctg;
+                    if (res.datos.chasis) document.getElementById('dominio_chasis').value = res.datos.chasis;
+                    if (res.datos.acoplado) document.getElementById('dominio_acoplado').value = res.datos.acoplado;
+                    if (res.datos.chofer) document.getElementById('chofer_nombre').value = res.datos.chofer;
+
+                    document.getElementById('tipo_documento').value = 'CARTA_DE_PORTE';
+                    enfocarWhatsApp();
+                } else {
+                    alert(res.message || "No se pudieron extraer datos del archivo.");
+                }
+            } catch (err) {
+                statusLabel.classList.add('hidden');
+                alert("Error al conectar con el servidor para leer el archivo.");
+            }
+        }
+
+        async function toggleCamara() {
+            if (scanning) {
+                detenerCamara();
+                return;
+            }
+
+            const video = document.getElementById('video');
+            const camContainer = document.getElementById('camContainer');
+
+            try {
+                videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                video.srcObject = videoStream;
+                video.setAttribute("playsinline", true);
+                video.play();
+                
+                camContainer.classList.remove('hidden');
+                document.getElementById('scanStatus').classList.remove('hidden');
+                scanning = true;
+                requestAnimationFrame(tick);
+            } catch (err) {
+                alert("Error al abrir la cámara: " + err.message);
+            }
+        }
+
+        function detenerCamara() {
+            scanning = false;
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+                videoStream = null;
+            }
+            document.getElementById('camContainer').classList.add('hidden');
+            document.getElementById('scanStatus').classList.add('hidden');
+        }
+
+        function tick() {
+            if (!scanning) return;
+
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            const context = canvas.getContext('2d');
+
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                canvas.height = video.videoHeight;
+                canvas.width = video.videoWidth;
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                
+                const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
+
+                if (code && code.data && scanning) {
+                    detenerCamara();
+                    document.getElementById('detalles_doc').value = code.data;
+                    buscarDatosOficiales();
+                    return;
+                }
+            }
+
+            if (scanning) {
+                requestAnimationFrame(tick);
+            }
+        }
+
+        async function buscarDatosOficiales() {
+            const ctgInput = document.getElementById('detalles_doc').value.trim();
+
+            if (!ctgInput) {
+                alert("Por favor ingrese un número de CTG/CPE.");
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/consultar-cpe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ctg: ctgInput })
+                });
+
+                const res = await response.json();
+
+                if (res.success && res.datos) {
+                    if (res.datos.ctg) document.getElementById('detalles_doc').value = res.datos.ctg;
+                    if (res.datos.chasis) document.getElementById('dominio_chasis').value = res.datos.chasis;
+                    if (res.datos.acoplado) document.getElementById('dominio_acoplado').value = res.datos.acoplado;
+                    if (res.datos.chofer) document.getElementById('chofer_nombre').value = res.datos.chofer;
+
+                    enfocarWhatsApp();
+                } else {
+                    alert("No se obtuvieron datos automáticos. Complete los campos manualmente.");
+                }
+            } catch (err) {
+                alert("Error al conectar con el servidor.");
+            }
+        }
+
+        document.getElementById('formTurno').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData();
+            formData.append('tipo_operacion', operacionSeleccionada);
+            formData.append('tipo_documento', document.getElementById('tipo_documento').value);
+            formData.append('dominio_chasis', document.getElementById('dominio_chasis').value);
+            formData.append('dominio_acoplado', document.getElementById('dominio_acoplado').value);
+            formData.append('chofer_nombre', document.getElementById('chofer_nombre').value);
+            formData.append('chofer_telefono', document.getElementById('chofer_telefono').value);
+            formData.append('detalles_doc', document.getElementById('detalles_doc').value);
+
+            const inputElement = document.getElementById('archivo_adjunto');
+            if (inputElement.files.length > 0) {
+                formData.append('adjunto', inputElement.files[0]);
+            }
+
+            const res = await fetch('/api/turnos', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await res.json();
+            if(result.success) {
+                document.getElementById('sectionScanner').classList.add('hidden');
+                document.getElementById('formTurno').classList.add('hidden');
+                document.getElementById('ticketSuccess').classList.remove('hidden');
+                document.getElementById('codigoTurno').innerText = result.turno.codigo_turno;
+            }
+        });
+    </script>
+</body>
+</html>

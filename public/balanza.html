@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Balanza - Gestión de Turnos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen p-6">
+    <div class="max-w-6xl mx-auto">
+        <header class="flex justify-between items-center mb-8 border-b border-gray-700 pb-4">
+            <div>
+                <h1 class="text-3xl font-extrabold text-blue-400">Control de Balanza</h1>
+                <p class="text-gray-400 text-sm">Gestión de turnos e ingreso a playa en tiempo real</p>
+            </div>
+            <div class="bg-gray-800 px-4 py-2 rounded-lg border border-gray-700">
+                <span class="text-xs text-gray-400 block">Estado del sistema</span>
+                <span class="text-green-400 font-bold flex items-center gap-2">
+                    <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Conectado
+                </span>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Columna: En Espera -->
+            <div class="bg-gray-800 rounded-xl p-4 border border-gray-700">
+                <h2 class="text-lg font-bold text-yellow-400 mb-4 flex justify-between items-center">
+                    <span>⏳ En Espera (Playa)</span>
+                    <span id="cantEspera" class="text-xs bg-yellow-500/20 text-yellow-300 px-2 py-1 rounded">0</span>
+                </h2>
+                <div id="listaEspera" class="space-y-3"></div>
+            </div>
+
+            <!-- Columna: En Tránsito / Llamados -->
+            <div class="bg-gray-800 rounded-xl p-4 border border-gray-700">
+                <h2 class="text-lg font-bold text-blue-400 mb-4 flex justify-between items-center">
+                    <span>🚛 En Tránsito a Balanza</span>
+                    <span id="cantTransito" class="text-xs bg-blue-500/20 text-blue-300 px-2 py-1 rounded">0</span>
+                </h2>
+                <div id="listaTransito" class="space-y-3"></div>
+            </div>
+
+            <!-- Columna: En Balanza (Pesaje) -->
+            <div class="bg-gray-800 rounded-xl p-4 border border-gray-700">
+                <h2 class="text-lg font-bold text-green-400 mb-4 flex justify-between items-center">
+                    <span>⚖️ En Balanza (Pesando)</span>
+                    <span id="cantBalanza" class="text-xs bg-green-500/20 text-green-300 px-2 py-1 rounded">0</span>
+                </h2>
+                <div id="listaBalanza" class="space-y-3"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+
+        // Cargar turnos iniciales al abrir la página
+        async function cargarTurnos() {
+            const res = await fetch('/api/turnos');
+            const turnos = await res.json();
+            renderizarTurnos(turnos);
+        }
+
+        function renderizarTurnos(turnos) {
+            const espera = document.getElementById('listaEspera');
+            const transito = document.getElementById('listaTransito');
+            const balanza = document.getElementById('listaBalanza');
+
+            espera.innerHTML = '';
+            transito.innerHTML = '';
+            balanza.innerHTML = '';
+
+            let cEspera = 0, cTransito = 0, cBalanza = 0;
+
+            turnos.forEach(t => {
+                const card = document.createElement('div');
+                card.className = "bg-gray-700/60 p-3.5 rounded-lg border border-gray-600 hover:border-gray-500 transition shadow";
+
+                let botones = '';
+                if (t.estado === 'ESPERANDO') {
+                    cEspera++;
+                    botones = `<button onclick="cambiarEstado(${t.id}, 'EN_TRANSITO')" class="w-full mt-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold py-2 rounded">LLAMAR A BALANZA</button>`;
+                } else if (t.estado === 'EN_TRANSITO') {
+                    cTransito++;
+                    botones = `<button onclick="cambiarEstado(${t.id}, 'EN_BALANZA')" class="w-full mt-2 bg-green-600 hover:bg-green-500 text-white text-xs font-bold py-2 rounded">INGRESAR A PESAR</button>`;
+                } else if (t.estado === 'EN_BALANZA') {
+                    cBalanza++;
+                    botones = `<button onclick="cambiarEstado(${t.id}, 'FINALIZADO')" class="w-full mt-2 bg-gray-500 hover:bg-gray-400 text-white text-xs font-bold py-2 rounded">FINALIZAR PESAJE</button>`;
+                }
+
+                const adjuntoLink = t.adjunto_path ? `<a href="${t.adjunto_path}" target="_blank" class="text-xs text-indigo-400 underline block mt-1">📎 Ver Adjunto</a>` : '';
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-1">
+                        <span class="text-xl font-black text-blue-300">${t.codigo_turno}</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded ${t.tipo_operacion === 'DESCARGA' ? 'bg-blue-900 text-blue-200' : 'bg-amber-900 text-amber-200'}">${t.tipo_operacion}</span>
+                    </div>
+                    <div class="text-sm font-bold text-white mb-1">${t.dominio_chasis} ${t.dominio_acoplado ? '/ ' + t.dominio_acoplado : ''}</div>
+                    <div class="text-xs text-gray-300">👨‍✈️ ${t.chofer_nombre || 'N/D'}</div>
+                    <div class="text-xs text-gray-300">📱 ${t.chofer_telefono || 'N/D'}</div>
+                    <div class="text-xs text-gray-400 mt-1">📄 CTG: <span class="font-mono text-gray-200">${t.detalles_doc || 'N/D'}</span></div>
+                    ${adjuntoLink}
+                    ${botones}
+                `;
+
+                if (t.estado === 'ESPERANDO') espera.appendChild(card);
+                else if (t.estado === 'EN_TRANSITO') transito.appendChild(card);
+                else if (t.estado === 'EN_BALANZA') balanza.appendChild(card);
+            });
+
+            document.getElementById('cantEspera').innerText = cEspera;
+            document.getElementById('cantTransito').innerText = cTransito;
+            document.getElementById('cantBalanza').innerText = cBalanza;
+        }
+
+        async function cambiarEstado(id, nuevoEstado) {
+            await fetch('/api/turnos/estado', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, estado: nuevoEstado })
+            });
+            cargarTurnos();
+        }
+
+        // WebSockets: Actualización en vivo cuando ingresa un nuevo turno o cambia un estado
+        socket.on('nuevo_turno', () => cargarTurnos());
+        socket.on('cambio_estado', () => cargarTurnos());
+
+        cargarTurnos();
+    </script>
+</body>
+</html>
