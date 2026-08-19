@@ -33,6 +33,21 @@ const uploadDisco = multer({ storage: diskStorage });
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// =========================================================================
+// 1. RUTAS ESPECÍFICAS DE PÁGINAS (Deben ir ANTES de express.static)
+// =========================================================================
+app.get('/dashboard', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+});
+
+app.get('/balanza', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+});
+
+// =========================================================================
+// 2. ARCHIVOS ESTÁTICOS (Sirve index.html para la raíz /)
+// =========================================================================
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Persistencia en JSON
@@ -51,10 +66,6 @@ if (fs.existsSync(DATA_FILE)) {
 function guardarTurnos() {
     fs.writeFileSync(DATA_FILE, JSON.stringify(turnos, null, 2));
 }
-
-// Rutas de alias para Dashboard
-app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
-app.get('/balanza', (req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
 
 // Función para extraer texto de PDF
 function extraerTextoPdfNativo(buffer) {
@@ -89,7 +100,11 @@ async function extraerTextoImagenOCR(buffer) {
     }
 }
 
-// 1. Endpoint para procesar archivo (PDF o Foto)
+// =========================================================================
+// 3. ENDPOINTS DE LA API
+// =========================================================================
+
+// Endpoint para procesar archivo (PDF o Foto)
 app.post('/api/procesar-archivo', uploadMemoria.single('archivo'), async (req, res) => {
     try {
         if (!req.file) {
@@ -112,7 +127,7 @@ app.post('/api/procesar-archivo', uploadMemoria.single('archivo'), async (req, r
         let acoplado = '';
         let chofer = '';
 
-        // Extraer CTG / CPE (Siempre presente)
+        // Extraer CTG / CPE
         const matchCTG = textoExtraido.match(/CTG:?\s*(\d{10,12})/i) || textoExtraido.match(/\b(10\d{9,10})\b/);
         if (matchCTG) {
             ctg = matchCTG[1] || matchCTG[0];
@@ -152,7 +167,7 @@ app.post('/api/procesar-archivo', uploadMemoria.single('archivo'), async (req, r
     }
 });
 
-// 2. Consulta Web Oficial a ARCA/AFIP usando Puppeteer (Navegador real headless)
+// Consulta Web Oficial a ARCA/AFIP usando Puppeteer
 app.post('/api/consultar-cpe', async (req, res) => {
     const { ctg } = req.body;
 
@@ -163,10 +178,22 @@ app.post('/api/consultar-cpe', async (req, res) => {
     let browser = null;
     try {
         console.log(`Iniciando Puppeteer para consultar CTG ${ctg} en ARCA/AFIP...`);
-        browser = await puppeteer.launch({
+        
+        const launchOptions = {
             headless: "new",
-            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
-        });
+            args: [
+                '--no-sandbox', 
+                '--disable-setuid-sandbox', 
+                '--disable-dev-shm-usage',
+                '--disable-gpu'
+            ]
+        };
+
+        if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+            launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+        }
+
+        browser = await puppeteer.launch(launchOptions);
 
         const page = await browser.newPage();
         await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
@@ -174,14 +201,11 @@ app.post('/api/consultar-cpe', async (req, res) => {
         const targetUrl = `https://serviciosweb.afip.gob.ar/cpe/consultarCpe.aspx?nroCpe=${ctg}`;
         await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 15000 });
 
-        // Extraer contenido de la página renderizada
         const datos = await page.evaluate(() => {
             const bodyText = document.body.innerText || '';
 
-            // Buscar Dominios (Chasis y Acoplado)
             const patentes = bodyText.match(/\b([A-Z]{2}\d{3}[A-Z]{2}|[A-Z]{3}\d{3})\b/gi) || [];
             
-            // Buscar Chofer
             let chofer = '';
             const matchChofer = bodyText.match(/Chofer\s*:?\s*(?:\d{11}|\d{2}-\d{8}-\d{1})?\s*[-:\s]*([A-Z\s]{5,40})/i);
             if (matchChofer && matchChofer[1]) chofer = matchChofer[1].trim();
@@ -215,10 +239,10 @@ app.post('/api/consultar-cpe', async (req, res) => {
     }
 });
 
-// 3. Obtener turnos
+// Obtener turnos
 app.get('/api/turnos', (req, res) => res.json(turnos));
 
-// 4. Registrar turno
+// Registrar turno
 app.post('/api/turnos', uploadDisco.single('adjunto'), (req, res) => {
     try {
         const {
@@ -261,7 +285,7 @@ app.post('/api/turnos', uploadDisco.single('adjunto'), (req, res) => {
     }
 });
 
-// 5. Cambiar estado
+// Cambiar estado
 app.post('/api/turnos/estado', (req, res) => {
     const { id, estado } = req.body;
     const turno = turnos.find(t => t.id === parseInt(id));
