@@ -3,293 +3,648 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ingreso a Playa - Pedido de Turno</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Control de Balanza - Gestión de Turnos</title>
+    <!-- Socket.IO Client -->
     <script src="/socket.io/socket.io.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --card-bg: #1e293b;
+            --card-border: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary-blue: #2563eb;
+            --primary-hover: #1d4ed8;
+            --success-green: #16a34a;
+            --success-hover: #15803d;
+            --warning-amber: #d97706;
+            --warning-hover: #b45309;
+            --danger-red: #ef4444;
+            --danger-hover: #dc2626;
+            --badge-descarga: #1e40af;
+            --badge-carga: #854d0e;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1400px;
+            margin: 0 auto 25px auto;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        .header-title h1 {
+            font-size: 1.8rem;
+            color: #60a5fa;
+            font-weight: 700;
+        }
+
+        .header-title p {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .header-status-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .status-badge {
+            background-color: rgba(30, 41, 59, 0.8);
+            border: 1px solid var(--card-border);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #ef4444;
+            box-shadow: 0 0 8px #ef4444;
+        }
+
+        .status-dot.online {
+            background-color: #22c55e;
+            box-shadow: 0 0 8px #22c55e;
+        }
+
+        .btn-qr {
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-qr:hover { background-color: #1d4ed8; }
+
+        .btn-logout-wa {
+            background-color: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+        .btn-logout-wa:hover { background-color: rgba(239, 68, 68, 0.4); }
+
+        .kanban-board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        @media (max-width: 992px) {
+            .kanban-board {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .column {
+            background-color: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            min-height: 70vh;
+        }
+
+        .column-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--card-border);
+        }
+
+        .column-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .col-espera .column-title { color: #f59e0b; }
+        .col-transito .column-title { color: #3b82f6; }
+        .col-pesando .column-title { color: #10b981; }
+
+        .counter {
+            background-color: var(--card-bg);
+            border: 1px solid var(--card-border);
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+
+        .cards-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            overflow-y: auto;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            padding: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 12px -2px rgba(0, 0, 0, 0.4);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .turno-codigo {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: #f8fafc;
+        }
+
+        .tipo-badge {
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 4px 8px;
+            border-radius: 6px;
+            text-transform: uppercase;
+        }
+
+        .tipo-descarga { background-color: var(--badge-descarga); color: #93c5fd; }
+        .tipo-carga { background-color: var(--badge-carga); color: #fde047; }
+
+        .card-patentes {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #38bdf8;
+            letter-spacing: 0.5px;
+        }
+
+        .card-info {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .info-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .card-actions {
+            margin-top: 5px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-llamar {
+            background-color: var(--primary-blue);
+            color: white;
+        }
+        .btn-llamar:hover { background-color: var(--primary-hover); }
+
+        .btn-ingresar {
+            background-color: var(--success-green);
+            color: white;
+        }
+        .btn-ingresar:hover { background-color: var(--success-hover); }
+
+        .btn-reencolar {
+            background-color: var(--danger-red);
+            color: white;
+            font-size: 0.75rem;
+            padding: 8px;
+        }
+        .btn-reencolar:hover { background-color: var(--danger-hover); }
+
+        .btn-finalizar {
+            background-color: var(--warning-amber);
+            color: white;
+        }
+        .btn-finalizar:hover { background-color: var(--warning-hover); }
+
+        .btn-adjunto {
+            color: #818cf8;
+            text-decoration: none;
+            font-size: 0.8rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 2px;
+        }
+        .btn-adjunto:hover { text-decoration: underline; }
+
+        .empty-msg {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            padding: 30px 10px;
+            border: 1px dashed var(--card-border);
+            border-radius: 8px;
+        }
+
+        /* MODALES */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-box {
+            background-color: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 420px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+            transform: scale(0.95);
+            transition: transform 0.2s ease;
+        }
+
+        .modal-overlay.active .modal-box {
+            transform: scale(1);
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 8px;
+        }
+
+        .modal-desc {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        .qr-container {
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            display: inline-block;
+            margin: 10px 0;
+        }
+
+        .qr-container img {
+            width: 200px;
+            height: 200px;
+            display: block;
+        }
+
+        .btn-cancelar {
+            background-color: #475569;
+            color: white;
+        }
+        .btn-cancelar:hover { background-color: #334155; }
+    </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col justify-center p-4">
-    <div class="max-w-md mx-auto bg-white rounded-xl shadow-md p-6 w-full">
-        <h1 class="text-2xl font-bold text-gray-800 text-center mb-1">Ingreso a Playa</h1>
-        <p class="text-xs text-gray-500 text-center mb-4">Complete sus datos o adjunte su Carta de Porte</p>
+<body>
 
-        <!-- Seccion Escaneo QR -->
-        <div id="sectionScanner" class="mb-4">
-            <button type="button" id="btnCamara" onclick="toggleCamara()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg flex items-center justify-center space-x-2 shadow">
-                <span>📷 ESCANEAR QR CON LA CÁMARA</span>
-            </button>
-            
-            <div id="camContainer" class="hidden mt-3 rounded-lg overflow-hidden border-2 border-indigo-500 relative bg-black">
-                <video id="video" class="w-full h-64 object-cover" playsinline></video>
-                <canvas id="canvas" class="hidden"></canvas>
-                
-                <div id="scanStatus" class="absolute bottom-2 left-2 right-2 bg-black/70 text-white text-center text-xs py-1 px-2 rounded hidden">
-                    Encuadre el código QR...
-                </div>
+    <header>
+        <div class="header-title">
+            <h1>Control de Balanza</h1>
+            <p>Gestión de turnos e ingreso a playa en tiempo real</p>
+        </div>
+        <div class="header-status-group">
+            <div class="status-badge">
+                <span class="status-dot" id="waDot"></span>
+                <span id="waText">WhatsApp: Cargando...</span>
+                <button class="btn-logout-wa" id="btnLogoutWa" style="display: none;" onclick="desvincularWhatsApp()">Cambiar número</button>
+            </div>
+            <button class="btn-qr" id="btnAbrirQr" onclick="abrirModalQr()">📲 Vincular WhatsApp</button>
+        </div>
+    </header>
 
-                <div class="absolute top-2 right-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded cursor-pointer z-10" onclick="detenerCamara()">Cerrar ✖</div>
+    <main class="kanban-board">
+        <!-- Columna 1: En Espera (Playa) -->
+        <section class="column col-espera">
+            <div class="column-header">
+                <span class="column-title">⏳ En Espera (Playa)</span>
+                <span class="counter" id="count-esperando">0</span>
+            </div>
+            <div class="cards-container" id="container-esperando"></div>
+        </section>
+
+        <!-- Columna 2: En Tránsito a Balanza -->
+        <section class="column col-transito">
+            <div class="column-header">
+                <span class="column-title">🚚 En Tránsito a Balanza</span>
+                <span class="counter" id="count-transito">0</span>
+            </div>
+            <div class="cards-container" id="container-transito"></div>
+        </section>
+
+        <!-- Columna 3: En Balanza (Pesando) -->
+        <section class="column col-pesando">
+            <div class="column-header">
+                <span class="column-title">⚖️ En Balanza (Pesando)</span>
+                <span class="counter" id="count-pesando">0</span>
+            </div>
+            <div class="cards-container" id="container-pesando"></div>
+        </section>
+    </main>
+
+    <!-- MODAL QR WHATSAPP -->
+    <div class="modal-overlay" id="modalQr">
+        <div class="modal-box">
+            <div class="modal-title">📲 Vincular WhatsApp</div>
+            <div class="modal-desc">
+                Escanee este código QR desde el celular de Balanza (WhatsApp → Dispositivos vinculados) para activar los mensajes automáticos.
+            </div>
+            <div id="qrContent">
+                <p style="color: var(--text-muted); font-size: 0.85rem; padding: 20px;">Esperando código QR del servidor...</p>
+            </div>
+            <div style="margin-top: 15px;">
+                <button class="btn btn-cancelar" onclick="cerrarModalQr()">CERRAR</button>
             </div>
         </div>
+    </div>
 
-        <form id="formTurno" class="space-y-3">
-            <!-- Adjuntar archivo PDF o Imagen -->
-            <div class="bg-blue-50 border-2 border-dashed border-blue-300 rounded-lg p-3 text-center">
-                <label class="block text-xs font-bold text-blue-900 uppercase mb-1">📄 Adjuntar PDF o Foto de CPE</label>
-                <input type="file" id="archivo_adjunto" accept="image/*,application/pdf" onchange="procesarArchivoAdjunto(this)" class="w-full text-xs text-gray-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-bold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer">
-                <span id="cargandoArchivo" class="text-xs text-blue-700 font-bold block mt-1 hidden">⏳ Leyendo Carta de Porte...</span>
+    <!-- MODAL RE-ENCOLAR -->
+    <div class="modal-overlay" id="modalReencolar">
+        <div class="modal-box">
+            <div style="font-size: 2.5rem; margin-bottom: 10px;">⚠️</div>
+            <div class="modal-title" id="modalTitle">¿Re-encolar Turno?</div>
+            <div class="modal-desc" id="modalDesc">
+                El turno volverá a la lista de espera en Playa y se le enviará una notificación por WhatsApp al chofer informándole que perdió su turno de llamada.
             </div>
-
-            <!-- Tipo de Operacion -->
-            <div>
-                <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Tipo de Operación</label>
-                <div class="grid grid-cols-2 gap-2">
-                    <button type="button" onclick="setOperacion('DESCARGA')" id="btnDescarga" class="py-2.5 px-4 rounded-lg font-bold border-2 border-blue-600 bg-blue-600 text-white text-center text-sm">DESCARGA</button>
-                    <button type="button" onclick="setOperacion('CARGA')" id="btnCarga" class="py-2.5 px-4 rounded-lg font-bold border-2 border-gray-200 bg-white text-gray-700 text-center text-sm">CARGA (TARA)</button>
-                </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-cancelar" onclick="cerrarModalReencolar()">CANCELAR</button>
+                <button class="btn btn-reencolar" id="btnConfirmarReencolar">CONFIRMAR</button>
             </div>
-
-            <!-- CTG / CPE -->
-            <div>
-                <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">N° CTG / CPE</label>
-                <div class="flex gap-2">
-                    <input type="text" id="detalles_doc" placeholder="10134080762" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm font-mono font-bold">
-                    <button type="button" onclick="buscarDatosOficiales()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 rounded-lg flex items-center shrink-0">
-                        🔍 AFIP
-                    </button>
-                </div>
-            </div>
-
-            <!-- Tipo Documento -->
-            <div>
-                <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Documento</label>
-                <select id="tipo_documento" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm">
-                    <option value="CARTA_DE_PORTE">Carta de Porte Electrónica (CPE)</option>
-                    <option value="REMITO">Remito</option>
-                </select>
-            </div>
-
-            <!-- Datos del Vehiculo -->
-            <div class="grid grid-cols-2 gap-2">
-                <div>
-                    <label class="block text-xs font-semibold text-gray-500 uppercase">Patente Chasis *</label>
-                    <input type="text" id="dominio_chasis" required placeholder="ROR484" class="w-full p-2.5 border border-gray-300 rounded-lg uppercase font-mono font-bold text-sm">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-500 uppercase">Patente Acoplado</label>
-                    <input type="text" id="dominio_acoplado" placeholder="AB419RG" class="w-full p-2.5 border border-gray-300 rounded-lg uppercase font-mono text-sm">
-                </div>
-            </div>
-
-            <div>
-                <label class="block text-xs font-semibold text-gray-500 uppercase">Nombre y Apellido Chofer *</label>
-                <input type="text" id="chofer_nombre" required placeholder="Ej: SANCHEZ EDUARDO ARMANDO" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm">
-            </div>
-
-            <!-- Campo Celular / WhatsApp Resaltado -->
-            <div id="contenedorTelefono" class="p-2.5 bg-amber-50 rounded-xl border-2 border-amber-400 transition-all">
-                <label class="block text-xs font-bold text-amber-900 uppercase mb-1 flex items-center justify-between">
-                    <span>📲 WhatsApp / Celular *</span>
-                    <span class="text-[10px] bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded font-extrabold animate-pulse">COMPLETAR AQUÍ</span>
-                </label>
-                <input type="tel" id="chofer_telefono" required placeholder="Ej: 2314123456" class="w-full p-2.5 border-2 border-amber-400 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none font-bold bg-white">
-            </div>
-
-            <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-lg text-base shadow-lg transition mt-2">
-                SOLICITAR TURNO
-            </button>
-        </form>
-
-        <!-- Ticket Confirmacion -->
-        <div id="ticketSuccess" class="hidden text-center py-6">
-            <div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold">✓</div>
-            <h2 class="text-xl font-bold text-gray-800">¡Turno Registrado!</h2>
-            <div id="codigoTurno" class="text-4xl font-extrabold text-blue-600 my-4">---</div>
-            <p class="text-sm text-gray-600">Aguarde en la playa. Recibirá un mensaje por WhatsApp cuando deba avanzar a la balanza.</p>
         </div>
     </div>
 
     <script>
-        let operacionSeleccionada = 'DESCARGA';
-        let videoStream = null;
-        let scanning = false;
+        const socket = io();
+        let turnosLocales = [];
+        let idTurnoASeleccionar = null;
 
-        function setOperacion(op) {
-            operacionSeleccionada = op;
-            if(op === 'DESCARGA') {
-                document.getElementById('btnDescarga').className = "py-2.5 px-4 rounded-lg font-bold border-2 border-blue-600 bg-blue-600 text-white text-center text-sm";
-                document.getElementById('btnCarga').className = "py-2.5 px-4 rounded-lg font-bold border-2 border-gray-200 bg-white text-gray-700 text-center text-sm";
+        // Actualizar UI según el estado de WhatsApp
+        function actualizarEstadoWhatsApp(data) {
+            const dot = document.getElementById('waDot');
+            const text = document.getElementById('waText');
+            const btnLogout = document.getElementById('btnLogoutWa');
+            const qrContent = document.getElementById('qrContent');
+
+            if (data.ready) {
+                dot.className = 'status-dot online';
+                text.innerHTML = `WhatsApp: <strong style="color:#22c55e">+${data.number || 'Conectado'}</strong>`;
+                btnLogout.style.display = 'inline-block';
+                qrContent.innerHTML = '<p style="color: #22c55e; font-weight: bold; padding: 20px;">✅ ¡WhatsApp Vinculado y Listo!</p>';
             } else {
-                document.getElementById('btnCarga').className = "py-2.5 px-4 rounded-lg font-bold border-2 border-blue-600 bg-blue-600 text-white text-center text-sm";
-                document.getElementById('btnDescarga').className = "py-2.5 px-4 rounded-lg font-bold border-2 border-gray-200 bg-white text-gray-700 text-center text-sm";
-            }
-        }
+                dot.className = 'status-dot';
+                text.innerHTML = `WhatsApp: <strong style="color:#ef4444">Desconectado</strong>`;
+                btnLogout.style.display = 'none';
 
-        function enfocarWhatsApp() {
-            const inputTel = document.getElementById('chofer_telefono');
-            inputTel.focus();
-            inputTel.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-
-        async function procesarArchivoAdjunto(input) {
-            if (!input.files || input.files.length === 0) return;
-
-            const archivo = input.files[0];
-            const statusLabel = document.getElementById('cargandoArchivo');
-            statusLabel.classList.remove('hidden');
-
-            const formData = new FormData();
-            formData.append('archivo', archivo);
-
-            try {
-                const response = await fetch('/api/procesar-archivo', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const res = await response.json();
-                statusLabel.classList.add('hidden');
-
-                if (res.success && res.datos) {
-                    if (res.datos.ctg) document.getElementById('detalles_doc').value = res.datos.ctg;
-                    if (res.datos.chasis) document.getElementById('dominio_chasis').value = res.datos.chasis;
-                    if (res.datos.acoplado) document.getElementById('dominio_acoplado').value = res.datos.acoplado;
-                    if (res.datos.chofer) document.getElementById('chofer_nombre').value = res.datos.chofer;
-
-                    document.getElementById('tipo_documento').value = 'CARTA_DE_PORTE';
-                    enfocarWhatsApp();
+                if (data.qr) {
+                    qrContent.innerHTML = `<div class="qr-container"><img src="${data.qr}" alt="Código QR WhatsApp"></div>`;
                 } else {
-                    alert(res.message || "No se pudieron extraer datos del archivo.");
-                }
-            } catch (err) {
-                statusLabel.classList.add('hidden');
-                alert("Error al conectar con el servidor para leer el archivo.");
-            }
-        }
-
-        async function toggleCamara() {
-            if (scanning) {
-                detenerCamara();
-                return;
-            }
-
-            const video = document.getElementById('video');
-            const camContainer = document.getElementById('camContainer');
-
-            try {
-                videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-                video.srcObject = videoStream;
-                video.setAttribute("playsinline", true);
-                video.play();
-                
-                camContainer.classList.remove('hidden');
-                document.getElementById('scanStatus').classList.remove('hidden');
-                scanning = true;
-                requestAnimationFrame(tick);
-            } catch (err) {
-                alert("Error al abrir la cámara: " + err.message);
-            }
-        }
-
-        function detenerCamara() {
-            scanning = false;
-            if (videoStream) {
-                videoStream.getTracks().forEach(track => track.stop());
-                videoStream = null;
-            }
-            document.getElementById('camContainer').classList.add('hidden');
-            document.getElementById('scanStatus').classList.add('hidden');
-        }
-
-        function tick() {
-            if (!scanning) return;
-
-            const video = document.getElementById('video');
-            const canvas = document.getElementById('canvas');
-            const context = canvas.getContext('2d');
-
-            if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                canvas.height = video.videoHeight;
-                canvas.width = video.videoWidth;
-                context.drawImage(video, 0, 0, canvas.width, canvas.height);
-                
-                const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-                const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
-
-                if (code && code.data && scanning) {
-                    detenerCamara();
-                    document.getElementById('detalles_doc').value = code.data;
-                    buscarDatosOficiales();
-                    return;
+                    qrContent.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem; padding: 20px;">Generando código QR... Por favor aguarde unos segundos.</p>';
                 }
             }
+        }
 
-            if (scanning) {
-                requestAnimationFrame(tick);
+        async function desvincularWhatsApp() {
+            if (confirm("¿Desea desvincular la cuenta actual de WhatsApp para conectar un nuevo número?")) {
+                document.getElementById('qrContent').innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem; padding: 20px;">Cerrando sesión y generando nuevo QR...</p>';
+                abrirModalQr();
+                await fetch('/api/wa-logout', { method: 'POST' });
             }
         }
 
-        async function buscarDatosOficiales() {
-            const ctgInput = document.getElementById('detalles_doc').value.trim();
+        function abrirModalQr() {
+            document.getElementById('modalQr').classList.add('active');
+            // Si está desconectado pero no hay QR cargado, consultar a la API
+            fetch('/api/wa-status').then(r => r.json()).then(data => actualizarEstadoWhatsApp(data));
+        }
 
-            if (!ctgInput) {
-                alert("Por favor ingrese un número de CTG/CPE.");
-                return;
+        function cerrarModalQr() {
+            document.getElementById('modalQr').classList.remove('active');
+        }
+
+        // Cargar turnos iniciales vía API
+        async function cargarTurnos() {
+            try {
+                const res = await fetch('/api/turnos');
+                turnosLocales = await res.json();
+                renderizarTablero();
+            } catch (err) {
+                console.error("Error al cargar turnos:", err);
+            }
+        }
+
+        // Renderizar las columnas del tablero Kanban
+        function renderizarTablero() {
+            const contEsperando = document.getElementById('container-esperando');
+            const contTransito = document.getElementById('container-transito');
+            const contPesando = document.getElementById('container-pesando');
+
+            contEsperando.innerHTML = '';
+            contTransito.innerHTML = '';
+            contPesando.innerHTML = '';
+
+            const esperando = turnosLocales.filter(t => t.estado === 'ESPERANDO');
+            const transito = turnosLocales.filter(t => t.estado === 'EN_TRANSITO');
+            const pesando = turnosLocales.filter(t => t.estado === 'EN_BALANZA');
+
+            document.getElementById('count-esperando').innerText = esperando.length;
+            document.getElementById('count-transito').innerText = transito.length;
+            document.getElementById('count-pesando').innerText = pesando.length;
+
+            if (esperando.length === 0) contEsperando.innerHTML = '<div class="empty-msg">No hay camiones en espera</div>';
+            else esperando.forEach(t => contEsperando.appendChild(crearTarjetaHTML(t)));
+
+            if (transito.length === 0) contTransito.innerHTML = '<div class="empty-msg">No hay camiones en tránsito</div>';
+            else transito.forEach(t => contTransito.appendChild(crearTarjetaHTML(t)));
+
+            if (pesando.length === 0) contPesando.innerHTML = '<div class="empty-msg">No hay camiones en pesaje</div>';
+            else pesando.forEach(t => contPesando.appendChild(crearTarjetaHTML(t)));
+        }
+
+        // Generar el elemento DOM de la tarjeta
+        function crearTarjetaHTML(t) {
+            const card = document.createElement('div');
+            card.className = 'card';
+
+            const patentes = t.dominio_acoplado ? `${t.dominio_chasis} / ${t.dominio_acoplado}` : t.dominio_chasis;
+            const claseTipo = t.tipo_operacion === 'CARGA' ? 'tipo-carga' : 'tipo-descarga';
+
+            let botonAccion = '';
+            if (t.estado === 'ESPERANDO') {
+                botonAccion = `<button class="btn btn-llamar" onclick="cambiarEstadoTurno(${t.id}, 'EN_TRANSITO')">LLAMAR A BALANZA</button>`;
+            } else if (t.estado === 'EN_TRANSITO') {
+                botonAccion = `
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <button class="btn btn-ingresar" onclick="cambiarEstadoTurno(${t.id}, 'EN_BALANZA')">INGRESAR A PESAR</button>
+                        <button class="btn btn-reencolar" onclick="abrirModalReencolar(${t.id}, '${t.codigo_turno}')">⚠️ PERDIÓ TURNO / VOLVER A ESPERA</button>
+                    </div>
+                `;
+            } else if (t.estado === 'EN_BALANZA') {
+                botonAccion = `<button class="btn btn-finalizar" onclick="cambiarEstadoTurno(${t.id}, 'FINALIZADO')">FINALIZAR TURNO</button>`;
             }
 
+            const linkAdjunto = t.adjunto_path ? `<a href="${t.adjunto_path}" target="_blank" class="btn-adjunto">📎 Ver Adjunto</a>` : '';
+
+            card.innerHTML = `
+                <div class="card-header">
+                    <span class="turno-codigo">${t.codigo_turno}</span>
+                    <span class="tipo-badge ${claseTipo}">${t.tipo_operacion}</span>
+                </div>
+                <div class="card-patentes">${patentes}</div>
+                <div class="card-info">
+                    <div class="info-row">👨‍✈️ ${t.chofer_nombre || 'No especificado'}</div>
+                    <div class="info-row">📱 ${t.chofer_telefono || 'Sin celular'}</div>
+                    ${t.detalles_doc ? `<div class="info-row">📄 CTG: ${t.detalles_doc}</div>` : ''}
+                    ${linkAdjunto}
+                </div>
+                <div class="card-actions">
+                    ${botonAccion}
+                </div>
+            `;
+
+            return card;
+        }
+
+        function abrirModalReencolar(id, codigoTurno) {
+            idTurnoASeleccionar = id;
+            document.getElementById('modalTitle').innerText = `¿Re-encolar Turno ${codigoTurno}?`;
+            document.getElementById('modalReencolar').classList.add('active');
+        }
+
+        function cerrarModalReencolar() {
+            idTurnoASeleccionar = null;
+            document.getElementById('modalReencolar').classList.remove('active');
+        }
+
+        document.getElementById('btnConfirmarReencolar').onclick = async () => {
+            if (idTurnoASeleccionar) {
+                const id = idTurnoASeleccionar;
+                cerrarModalReencolar();
+                await cambiarEstadoTurno(id, 'RE_ENCOLADO');
+            }
+        };
+
+        // Función genérica para cambiar estado vía API
+        async function cambiarEstadoTurno(id, nuevoEstado) {
             try {
-                const response = await fetch('/api/consultar-cpe', {
+                const res = await fetch('/api/turnos/estado', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ctg: ctgInput })
+                    body: JSON.stringify({ id: id, estado: nuevoEstado })
                 });
-
-                const res = await response.json();
-
-                if (res.success && res.datos) {
-                    if (res.datos.ctg) document.getElementById('detalles_doc').value = res.datos.ctg;
-                    if (res.datos.chasis) document.getElementById('dominio_chasis').value = res.datos.chasis;
-                    if (res.datos.acoplado) document.getElementById('dominio_acoplado').value = res.datos.acoplado;
-                    if (res.datos.chofer) document.getElementById('chofer_nombre').value = res.datos.chofer;
-
-                    enfocarWhatsApp();
-                } else {
-                    alert("No se obtuvieron datos automáticos. Complete los campos manualmente.");
+                const data = await res.json();
+                if (!data.success) {
+                    alert("Error al actualizar estado: " + data.message);
                 }
             } catch (err) {
-                alert("Error al conectar con el servidor.");
+                console.error("Error de red al actualizar estado:", err);
             }
         }
 
-        document.getElementById('formTurno').addEventListener('submit', async (e) => {
-            e.preventDefault();
+        // WebSockets
+        socket.on('wa_status', (data) => actualizarEstadoWhatsApp(data));
 
-            const formData = new FormData();
-            formData.append('tipo_operacion', operacionSeleccionada);
-            formData.append('tipo_documento', document.getElementById('tipo_documento').value);
-            formData.append('dominio_chasis', document.getElementById('dominio_chasis').value);
-            formData.append('dominio_acoplado', document.getElementById('dominio_acoplado').value);
-            formData.append('chofer_nombre', document.getElementById('chofer_nombre').value);
-            formData.append('chofer_telefono', document.getElementById('chofer_telefono').value);
-            formData.append('detalles_doc', document.getElementById('detalles_doc').value);
+        socket.on('nuevo_turno', (nuevoTurno) => {
+            turnosLocales.push(nuevoTurno);
+            renderizarTablero();
+        });
 
-            const inputElement = document.getElementById('archivo_adjunto');
-            if (inputElement.files.length > 0) {
-                formData.append('adjunto', inputElement.files[0]);
-            }
-
-            const res = await fetch('/api/turnos', {
-                method: 'POST',
-                body: formData
-            });
-
-            const result = await res.json();
-            if(result.success) {
-                document.getElementById('sectionScanner').classList.add('hidden');
-                document.getElementById('formTurno').classList.add('hidden');
-                document.getElementById('ticketSuccess').classList.remove('hidden');
-                document.getElementById('codigoTurno').innerText = result.turno.codigo_turno;
+        socket.on('cambio_estado', (data) => {
+            const idx = turnosLocales.findIndex(t => t.id === data.id);
+            if (idx !== -1) {
+                if (data.estado === 'FINALIZADO') {
+                    turnosLocales.splice(idx, 1);
+                } else {
+                    turnosLocales[idx].estado = data.estado;
+                }
+                renderizarTablero();
             }
         });
+
+        // Inicio
+        cargarTurnos();
+        fetch('/api/wa-status').then(r => r.json()).then(data => actualizarEstadoWhatsApp(data));
     </script>
 </body>
 </html>

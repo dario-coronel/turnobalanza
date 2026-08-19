@@ -1,9 +1,11 @@
-version: '3.8'
-
 services:
   balanza-app:
     build: .
     container_name: balanza_demo_app
     ports:
       - "3000:3000"
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+      - ./uploads:/usr/src/app/public/uploads
     restart: always

@@ -4,3 +4,7 @@ public/uploads/*
 turnos.json
 .env
 *.log
+.wwebjs_auth/
+afip_certs/
+public/uploads/
+.env
