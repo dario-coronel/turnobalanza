@@ -1,0 +1,11 @@
+{
+  "smtp": {
+    "host": "vnct6009.avnam.net",
+    "port": 465,
+    "secure": true,
+    "user": "it@edpagro.com.ar",
+    "pass": "Edp-1234",
+    "from": "\"Balanza EDP Agroindustrial\" <it@edpagro.com.ar>"
+  },
+  "jwtSecret": "balanza_secret_jwt_key_2026_edp"
+}

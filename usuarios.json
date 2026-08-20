@@ -1,0 +1,35 @@
+[
+  {
+    "id": 1,
+    "username": "admin",
+    "nombre": "Administrador",
+    "email": "it@edpagro.com.ar",
+    "password": "$2b$10$3HrzyMMrCol4QWiVRftDiuK6yBJRZh9Eqvz1Fg5qfC.sxluPC1Bcu",
+    "rol": "admin",
+    "resetToken": null,
+    "resetExpires": null,
+    "activo": true
+  },
+  {
+    "id": 2,
+    "username": "balanza",
+    "nombre": "Operador Balanza",
+    "email": "sbertino@edpagro.com.ar",
+    "password": "$2b$10$.QwxYL26NvBzoVJsETqepOR2tZwITseDpHCRDlpKAlmKVSiTq1bwe",
+    "rol": "balanza",
+    "resetToken": null,
+    "resetExpires": null,
+    "activo": true
+  },
+  {
+    "id": 3,
+    "username": "planta",
+    "nombre": "Supervisión Planta",
+    "email": "carlosf@edpagro.com.ar",
+    "password": "$2b$10$dxQScp3aJnLRgmU28D3t8OLi1bWFnuJLaGpNgpRQKZfJY6WwCpTmS",
+    "rol": "planta",
+    "resetToken": null,
+    "resetExpires": null,
+    "activo": true
+  }
+]

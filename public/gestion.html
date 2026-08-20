@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Métricas y Gestión Operativa - Balanza</title>
+    <style>
+        :root {
+            --bg-dark: #090d16;
+            --card-bg: #151f32;
+            --card-border: #23334d;
+            --primary-blue: #2563eb;
+            --primary-blue-hover: #1d4ed8;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --success-green: #16a34a;
+            --warning-amber: #d97706;
+            --danger-red: #ef4444;
+            --purple-tara: #9333ea;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            padding: 16px 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        .header-title h1 {
+            font-size: 1.35rem;
+            color: #60a5fa;
+            font-weight: 700;
+        }
+
+        .header-title p {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
+        /* BARRA DE FILTROS */
+        .filter-bar {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            padding: 12px 16px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            gap: 14px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .filter-group label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .filter-input, .filter-select {
+            background: #090d16;
+            border: 1px solid var(--card-border);
+            color: #fff;
+            padding: 8px 10px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            outline: none;
+            min-width: 140px;
+        }
+
+        .filter-input:focus, .filter-select:focus {
+            border-color: #3b82f6;
+        }
+
+        .filter-actions {
+            display: flex;
+            gap: 8px;
+            margin-left: auto;
+        }
+
+        .btn-filter {
+            background: var(--primary-blue);
+            color: #fff;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: background 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-filter:hover { background: var(--primary-blue-hover); }
+
+        .btn-export {
+            background: #1e293b;
+            color: #38bdf8;
+            border: 1px solid var(--card-border);
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-export:hover { background: #334155; }
+
+        /* KPI CARDS */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 14px;
+        }
+
+        .kpi-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .kpi-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .kpi-value {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: #f8fafc;
+            font-family: monospace, system-ui;
+        }
+
+        .kpi-sub {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+        }
+
+        /* TABLA DE GESTIÓN */
+        .table-panel {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            padding: 16px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+            min-height: 350px;
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .table-header h2 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #93c5fd;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+            flex-grow: 1;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+            text-align: left;
+        }
+
+        th {
+            background: #0f172a;
+            color: var(--text-muted);
+            padding: 9px 10px;
+            border-bottom: 1px solid var(--card-border);
+            text-transform: uppercase;
+            font-size: 0.7rem;
+            position: sticky;
+            top: 0;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #1c283d;
+            color: #cbd5e1;
+            white-space: nowrap;
+        }
+
+        tr:hover td { background: #1a263e; }
+
+        .badge-op {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 700;
+            font-size: 0.68rem;
+            text-transform: uppercase;
+        }
+        .badge-descarga { background: rgba(37, 99, 235, 0.2); color: #60a5fa; }
+        .badge-carga { background: rgba(217, 119, 6, 0.2); color: #fbbf24; }
+
+        .badge-st {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .st-espera { background: rgba(59, 130, 246, 0.15); color: #93c5fd; }
+        .st-transito { background: rgba(245, 158, 11, 0.15); color: #fde68a; }
+        .st-balanza { background: rgba(34, 197, 94, 0.15); color: #86efac; }
+        .st-planta { background: rgba(168, 85, 247, 0.15); color: #d8b4fe; }
+        .st-fin { background: rgba(100, 116, 139, 0.2); color: #cbd5e1; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-title">
+            <h1>📊 Métricas y Gestión Operativa</h1>
+            <p>Análisis de Tiempos de Espera, Pesaje y Flujo de Camiones</p>
+        </div>
+    </header>
+
+    <!-- BARRA DE FILTROS -->
+    <div class="filter-bar">
+        <div class="filter-group">
+            <label>Desde Fecha</label>
+            <input type="date" id="fechaDesde" class="filter-input" onchange="aplicarFiltros()">
+        </div>
+
+        <div class="filter-group">
+            <label>Hasta Fecha</label>
+            <input type="date" id="fechaHasta" class="filter-input" onchange="aplicarFiltros()">
+        </div>
+
+        <div class="filter-group">
+            <label>Tipo de Operación</label>
+            <select id="filtroOperacion" class="filter-select" onchange="aplicarFiltros()">
+                <option value="TODOS">Todas las Operaciones</option>
+                <option value="DESCARGA">Descarga</option>
+                <option value="CARGA">Carga</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label>Producto / Cereal</label>
+            <select id="filtroProducto" class="filter-select" onchange="aplicarFiltros()">
+                <option value="TODOS">Todos los Productos</option>
+                <option value="SOJA">Soja</option>
+                <option value="GIRASOL">Girasol</option>
+                <option value="MAIZ">Maíz</option>
+                <option value="TRIGO">Trigo</option>
+                <option value="OTROS">Otros / Insumos</option>
+            </select>
+        </div>
+
+        <div class="filter-actions">
+            <button class="btn-filter" onclick="restablecerFiltros()">🔄 Restablecer</button>
+            <button class="btn-export" onclick="exportarCSV()">📥 Exportar CSV</button>
+        </div>
+    </div>
+
+    <!-- TARJETAS DE KPIS -->
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <span class="kpi-label">Total de Camiones</span>
+            <span class="kpi-value" id="kpiTotalCamiones" style="color: #60a5fa;">0</span>
+            <span class="kpi-sub" id="kpiSubOperacion">Período seleccionado</span>
+        </div>
+
+        <div class="kpi-card">
+            <span class="kpi-label">Promedio Espera Playa</span>
+            <span class="kpi-value" id="kpiPromPlaya" style="color: #fbbf24;">0 min</span>
+            <span class="kpi-sub">Desde ingreso hasta llamado</span>
+        </div>
+
+        <div class="kpi-card">
+            <span class="kpi-label">Promedio en Balanza</span>
+            <span class="kpi-value" id="kpiPromBalanza" style="color: #4ade80;">0 min</span>
+            <span class="kpi-sub">Tiempo de pesaje bruto/tara</span>
+        </div>
+
+        <div class="kpi-card">
+            <span class="kpi-label">Ciclo Total Promedio</span>
+            <span class="kpi-value" id="kpiPromCiclo" style="color: #c084fc;">0 min</span>
+            <span class="kpi-sub">Ingreso a playa hasta salida</span>
+        </div>
+    </div>
+
+    <!-- TABLA DE DETALLE HISTÓRICO -->
+    <div class="table-panel">
+        <div class="table-header">
+            <h2>Registros y Tiempos Detallados (<span id="totalRegistros">0</span>)</h2>
+        </div>
+
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Turno</th>
+                        <th>Fecha/Hora</th>
+                        <th>Operación</th>
+                        <th>Producto</th>
+                        <th>Chasis / Acoplado</th>
+                        <th>Chofer</th>
+                        <th>T. Playa</th>
+                        <th>T. Balanza</th>
+                        <th>T. Total</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaGestionBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let turnosCompletos = [];
+        let turnosFiltrados = [];
+
+        // Inicializar fechas por defecto (del 1ro del mes actual al día de hoy)
+        function inicializarFechas() {
+            const hoy = new Date();
+            const anio = hoy.getFullYear();
+            const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+            const dia = String(hoy.getDate()).padStart(2, '0');
+
+            document.getElementById('fechaDesde').value = `${anio}-${mes}-01`;
+            document.getElementById('fechaHasta').value = `${anio}-${mes}-${dia}`;
+        }
+
+        async function cargarDatos() {
+            try {
+                const res = await fetch('/api/turnos');
+                if (res.ok) {
+                    turnosCompletos = await res.json();
+                    aplicarFiltros();
+                }
+            } catch (e) {
+                console.error("Error al cargar turnos:", e);
+            }
+        }
+
+        function aplicarFiltros() {
+            const fDesde = document.getElementById('fechaDesde').value;
+            const fHasta = document.getElementById('fechaHasta').value;
+            const fOperacion = document.getElementById('filtroOperacion').value;
+            const fProducto = document.getElementById('filtroProducto').value;
+
+            const dDesde = fDesde ? new Date(`${fDesde}T00:00:00`) : null;
+            const dHasta = fHasta ? new Date(`${fHasta}T23:59:59`) : null;
+
+            turnosFiltrados = turnosCompletos.filter(t => {
+                // Filtro Fecha
+                if (t.fecha_ingreso_playa) {
+                    const fIngreso = new Date(t.fecha_ingreso_playa);
+                    if (dDesde && fIngreso < dDesde) return false;
+                    if (dHasta && fIngreso > dHasta) return false;
+                }
+
+                // Filtro Operación
+                if (fOperacion !== 'TODOS') {
+                    if ((t.tipo_operacion || '').toUpperCase() !== fOperacion) return false;
+                }
+
+                // Filtro Producto
+                if (fProducto !== 'TODOS') {
+                    const prod = (t.producto_carga || '').toUpperCase();
+                    if (fProducto === 'MAIZ' && !(prod.includes('MAI') || prod.includes('MAÍ'))) return false;
+                    if (fProducto === 'GIRASOL' && !prod.includes('GIRASOL')) return false;
+                    if (fProducto === 'SOJA' && !prod.includes('SOJA')) return false;
+                    if (fProducto === 'TRIGO' && !prod.includes('TRIGO')) return false;
+                    if (fProducto === 'OTROS' && (prod.includes('MAI') || prod.includes('GIRASOL') || prod.includes('SOJA') || prod.includes('TRIGO'))) return false;
+                }
+
+                return true;
+            });
+
+            actualizarKPIs();
+            renderizarTabla();
+        }
+
+        function diferenciaMinutos(isoInicio, isoFin) {
+            if (!isoInicio || !isoFin) return null;
+            const ms = new Date(isoFin) - new Date(isoInicio);
+            return Math.max(0, Math.round(ms / 60000));
+        }
+
+        function formatearMinutos(min) {
+            if (min === null || isNaN(min)) return '--';
+            if (min < 60) return `${min}m`;
+            const h = Math.floor(min / 60);
+            const m = min % 60;
+            return `${h}h ${m}m`;
+        }
+
+        function actualizarKPIs() {
+            document.getElementById('kpiTotalCamiones').innerText = turnosFiltrados.length;
+            document.getElementById('totalRegistros').innerText = turnosFiltrados.length;
+
+            let sumaPlaya = 0, cantPlaya = 0;
+            let sumaBalanza = 0, cantBalanza = 0;
+            let sumaTotal = 0, cantTotal = 0;
+
+            turnosFiltrados.forEach(t => {
+                // Tiempo en playa (ingreso -> llamado)
+                if (t.fecha_ingreso_playa && t.fecha_llamado_balanza) {
+                    const m = diferenciaMinutos(t.fecha_ingreso_playa, t.fecha_llamado_balanza);
+                    if (m !== null) { sumaPlaya += m; cantPlaya++; }
+                }
+
+                // Tiempo en balanza (llamado/ingreso -> salida)
+                const inicioBalanza = t.fecha_ingreso_balanza || t.fecha_llamado_balanza;
+                if (inicioBalanza && t.fecha_salida_balanza) {
+                    const m = diferenciaMinutos(inicioBalanza, t.fecha_salida_balanza);
+                    if (m !== null) { sumaBalanza += m; cantBalanza++; }
+                }
+
+                // Ciclo total (ingreso playa -> salida final)
+                if (t.fecha_ingreso_playa && t.fecha_salida_balanza) {
+                    const m = diferenciaMinutos(t.fecha_ingreso_playa, t.fecha_salida_balanza);
+                    if (m !== null) { sumaTotal += m; cantTotal++; }
+                }
+            });
+
+            const promPlaya = cantPlaya > 0 ? Math.round(sumaPlaya / cantPlaya) : 0;
+            const promBalanza = cantBalanza > 0 ? Math.round(sumaBalanza / cantBalanza) : 0;
+            const promTotal = cantTotal > 0 ? Math.round(sumaTotal / cantTotal) : 0;
+
+            document.getElementById('kpiPromPlaya').innerText = formatearMinutos(promPlaya);
+            document.getElementById('kpiPromBalanza').innerText = formatearMinutos(promBalanza);
+            document.getElementById('kpiPromCiclo').innerText = formatearMinutos(promTotal);
+        }
+
+        function renderizarTabla() {
+            const tbody = document.getElementById('tablaGestionBody');
+            tbody.innerHTML = '';
+
+            // Orden descendente por id o fecha
+            const turnosOrdenados = [...turnosFiltrados].sort((a, b) => b.id - a.id);
+
+            turnosOrdenados.forEach(t => {
+                const tr = document.createElement('tr');
+
+                const fFecha = t.fecha_ingreso_playa 
+                    ? new Date(t.fecha_ingreso_playa).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })
+                    : '--';
+
+                const tPlaya = formatearMinutos(diferenciaMinutos(t.fecha_ingreso_playa, t.fecha_llamado_balanza));
+                const tBalanza = formatearMinutos(diferenciaMinutos(t.fecha_ingreso_balanza || t.fecha_llamado_balanza, t.fecha_salida_balanza));
+                const tTotal = formatearMinutos(diferenciaMinutos(t.fecha_ingreso_playa, t.fecha_salida_balanza));
+
+                const opBadge = t.tipo_operacion === 'DESCARGA' 
+                    ? '<span class="badge-op badge-descarga">Descarga</span>' 
+                    : '<span class="badge-op badge-carga">Carga</span>';
+
+                let estadoBadge = '<span class="badge-st st-espera">En Playa</span>';
+                if (t.estado === 'EN_TRANSITO') estadoBadge = '<span class="badge-st st-transito">En Tránsito</span>';
+                else if (t.estado === 'EN_BALANZA') estadoBadge = '<span class="badge-st st-balanza">En Balanza</span>';
+                else if (t.estado === 'EN_PLANTA_TARA') estadoBadge = '<span class="badge-st st-planta">En Planta</span>';
+                else if (t.estado === 'FINALIZADO') estadoBadge = '<span class="badge-st st-fin">Finalizado</span>';
+
+                const patentes = `${t.dominio_chasis || '--'}${t.dominio_acoplado ? ' / ' + t.dominio_acoplado : ''}`;
+
+                tr.innerHTML = `
+                    <td style="font-weight: 800; color: #38bdf8;">${t.codigo_turno}</td>
+                    <td style="color: var(--text-muted);">${fFecha}</td>
+                    <td>${opBadge}</td>
+                    <td style="font-weight: 600;">${t.producto_carga || '--'}</td>
+                    <td>${patentes}</td>
+                    <td>${t.chofer_nombre || '--'}</td>
+                    <td>${tPlaya}</td>
+                    <td>${tBalanza}</td>
+                    <td style="font-weight: 700; color: #f1f5f9;">${tTotal}</td>
+                    <td>${estadoBadge}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function restablecerFiltros() {
+            inicializarFechas();
+            document.getElementById('filtroOperacion').value = 'TODOS';
+            document.getElementById('filtroProducto').value = 'TODOS';
+            aplicarFiltros();
+        }
+
+        function exportarCSV() {
+            if (turnosFiltrados.length === 0) {
+                alert("No hay registros para exportar con los filtros seleccionados.");
+                return;
+            }
+
+            const encabezados = ["Turno", "Fecha Ingreso", "Operacion", "Producto", "Chasis", "Acoplado", "Chofer", "Telefono", "Minutos Playa", "Minutos Balanza", "Minutos Total", "Estado"];
+            const filas = turnosFiltrados.map(t => [
+                `"${t.codigo_turno || ''}"`,
+                `"${t.fecha_ingreso_playa || ''}"`,
+                `"${t.tipo_operacion || ''}"`,
+                `"${t.producto_carga || ''}"`,
+                `"${t.dominio_chasis || ''}"`,
+                `"${t.dominio_acoplado || ''}"`,
+                `"${t.chofer_nombre || ''}"`,
+                `"${t.chofer_telefono || ''}"`,
+                diferenciaMinutos(t.fecha_ingreso_playa, t.fecha_llamado_balanza) || '',
+                diferenciaMinutos(t.fecha_ingreso_balanza || t.fecha_llamado_balanza, t.fecha_salida_balanza) || '',
+                diferenciaMinutos(t.fecha_ingreso_playa, t.fecha_salida_balanza) || '',
+                `"${t.estado || ''}"`
+            ]);
+
+            const csvContent = "data:text/csv;charset=utf-8,\uFEFF" 
+                + [encabezados.join(";"), ...filas.map(e => e.join(";"))].join("\n");
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Reporte_Balanza_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Arranque
+        inicializarFechas();
+        cargarDatos();
+    </script>
+</body>
+</html>

@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recuperar Contraseña - Balanza</title>
+    <style>
+        :root {
+            --bg-dark: #090d16;
+            --card-bg: #151f32;
+            --card-border: #23334d;
+            --primary-blue: #2563eb;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --success-green: #16a34a;
+            --danger-red: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .recovery-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 30px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        }
+
+        .recovery-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .recovery-header h1 {
+            font-size: 1.3rem;
+            color: #60a5fa;
+            font-weight: 700;
+        }
+
+        .recovery-header p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        .form-input {
+            width: 100%;
+            background: #090d16;
+            border: 1px solid var(--card-border);
+            color: #fff;
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        .form-input:focus {
+            border-color: #3b82f6;
+        }
+
+        .btn-action {
+            width: 100%;
+            background: var(--primary-blue);
+            color: #fff;
+            border: none;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: background 0.15s;
+            margin-top: 8px;
+        }
+
+        .btn-action:hover {
+            background: #1d4ed8;
+        }
+
+        .feedback-msg {
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            margin-bottom: 14px;
+            display: none;
+            text-align: center;
+        }
+
+        .msg-error {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid var(--danger-red);
+            color: #fca5a5;
+        }
+
+        .msg-success {
+            background: rgba(22, 163, 74, 0.15);
+            border: 1px solid var(--success-green);
+            color: #86efac;
+        }
+
+        .footer-links {
+            margin-top: 18px;
+            text-align: center;
+        }
+
+        .footer-links a {
+            color: #60a5fa;
+            font-size: 0.78rem;
+            text-decoration: none;
+        }
+
+        .footer-links a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="recovery-card">
+        <!-- SOLICITAR TOKEN -->
+        <div id="sectionSolicitud">
+            <div class="recovery-header">
+                <h1>🔑 Recuperar Contraseña</h1>
+                <p>Ingrese su correo corporativo para recibir las instrucciones de restablecimiento.</p>
+            </div>
+
+            <div id="msgSolicitud" class="feedback-msg"></div>
+
+            <form id="formSolicitud" onsubmit="enviarSolicitud(event)">
+                <div class="form-group">
+                    <label>Correo Electrónico</label>
+                    <input type="email" id="emailSolicitud" class="form-input" placeholder="usuario@edpagroindustrial.com.ar" required>
+                </div>
+                <button type="submit" class="btn-action" id="btnSolicitud">Enviar Enlace</button>
+            </form>
+        </div>
+
+        <!-- CAMBIAR PASSWORD (SI VIENE CON ?token=) -->
+        <div id="sectionReset" style="display: none;">
+            <div class="recovery-header">
+                <h1>🔒 Nueva Contraseña</h1>
+                <p>Establezca una nueva clave para su cuenta.</p>
+            </div>
+
+            <div id="msgReset" class="feedback-msg"></div>
+
+            <form id="formReset" onsubmit="ejecutarReset(event)">
+                <input type="hidden" id="tokenInput">
+                <div class="form-group">
+                    <label>Nueva Contraseña</label>
+                    <input type="password" id="nuevaPassword" class="form-input" required minlength="6">
+                </div>
+                <div class="form-group">
+                    <label>Confirmar Contraseña</label>
+                    <input type="password" id="confirmaPassword" class="form-input" required minlength="6">
+                </div>
+                <button type="submit" class="btn-action" id="btnReset">Actualizar Contraseña</button>
+            </form>
+        </div>
+
+        <div class="footer-links">
+            <a href="/login">← Volver al Inicio de Sesión</a>
+        </div>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+
+        if (token) {
+            document.getElementById('sectionSolicitud').style.display = 'none';
+            document.getElementById('sectionReset').style.display = 'block';
+            document.getElementById('tokenInput').value = token;
+        }
+
+        async function enviarSolicitud(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnSolicitud');
+            const msg = document.getElementById('msgSolicitud');
+            const email = document.getElementById('emailSolicitud').value.trim();
+
+            msg.style.display = 'none';
+            btn.disabled = true;
+            btn.innerText = 'Enviando...';
+
+            try {
+                const res = await fetch('/api/auth/forgot-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+                const data = await res.json();
+
+                msg.className = `feedback-msg ${data.success ? 'msg-success' : 'msg-error'}`;
+                msg.innerText = data.message;
+                msg.style.display = 'block';
+            } catch (err) {
+                msg.className = 'feedback-msg msg-error';
+                msg.innerText = 'Error de conexión con el servidor de correo.';
+                msg.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'Enviar Enlace';
+            }
+        }
+
+        async function ejecutarReset(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnReset');
+            const msg = document.getElementById('msgReset');
+            const p1 = document.getElementById('nuevaPassword').value;
+            const p2 = document.getElementById('confirmaPassword').value;
+            const token = document.getElementById('tokenInput').value;
+
+            if (p1 !== p2) {
+                msg.className = 'feedback-msg msg-error';
+                msg.innerText = 'Las contraseñas no coinciden.';
+                msg.style.display = 'block';
+                return;
+            }
+
+            msg.style.display = 'none';
+            btn.disabled = true;
+            btn.innerText = 'Guardando...';
+
+            try {
+                const res = await fetch('/api/auth/reset-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token, password: p1 })
+                });
+                const data = await res.json();
+
+                msg.className = `feedback-msg ${data.success ? 'msg-success' : 'msg-error'}`;
+                msg.innerText = data.message;
+                msg.style.display = 'block';
+
+                if (data.success) {
+                    setTimeout(() => { window.location.href = '/login'; }, 2000);
+                }
+            } catch (err) {
+                msg.className = 'feedback-msg msg-error';
+                msg.innerText = 'Error al actualizar contraseña.';
+                msg.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'Actualizar Contraseña';
+            }
+        }
+    </script>
+</body>
+</html>

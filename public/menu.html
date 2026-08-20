@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Balanza - EDP Agroindustrial</title>
+    <style>
+        :root {
+            --bg-dark: #090d16;
+            --sidebar-bg: #0f172a;
+            --card-border: #1e293b;
+            --primary-blue: #2563eb;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --danger-red: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* SIDEBAR LATERAL */
+        .sidebar {
+            width: 260px;
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--card-border);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 16px 12px;
+            flex-shrink: 0;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--card-border);
+            margin-bottom: 20px;
+        }
+
+        .brand h2 {
+            font-size: 1.15rem;
+            color: #60a5fa;
+            font-weight: 800;
+        }
+
+        .brand span {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            display: block;
+        }
+
+        .nav-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            color: #cbd5e1;
+            text-decoration: none;
+            font-size: 0.88rem;
+            font-weight: 600;
+            transition: all 0.15s ease;
+            cursor: pointer;
+        }
+
+        .nav-link:hover {
+            background: #1e293b;
+            color: #60a5fa;
+        }
+
+        .nav-link.active {
+            background: rgba(37, 99, 235, 0.2);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.4);
+        }
+
+        .nav-icon {
+            font-size: 1.1rem;
+        }
+
+        /* PERFIL DE USUARIO Y LOGOUT EN FOOTER DE SIDEBAR */
+        .sidebar-footer {
+            border-top: 1px solid var(--card-border);
+            padding-top: 14px;
+        }
+
+        .user-info {
+            padding: 6px 12px;
+            margin-bottom: 8px;
+        }
+
+        .user-name {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #f1f5f9;
+        }
+
+        .user-role {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .btn-logout {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            padding: 10px 14px;
+            border-radius: 8px;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 700;
+            transition: background 0.15s;
+        }
+
+        .btn-logout:hover {
+            background: #dc2626;
+            color: #ffffff;
+        }
+
+        /* CONTENIDO PRINCIPAL */
+        .main-content {
+            flex-grow: 1;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-dark);
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- MENÚ LATERAL -->
+    <aside class="sidebar">
+        <div>
+            <div class="brand">
+                <div style="font-size: 1.6rem;">⚖️</div>
+                <div>
+                    <h2>EDP Balanza</h2>
+                    <span>Agroindustrial S.A.</span>
+                </div>
+            </div>
+
+            <ul class="nav-list">
+                <li id="itemDashboard">
+                    <a class="nav-link active" onclick="navegar('/dashboard', this)">
+                        <span class="nav-icon">💻</span>
+                        <span>Panel de Balanza</span>
+                    </a>
+                </li>
+                <li id="itemGestion">
+                    <a class="nav-link" onclick="navegar('/gestion', this)">
+                        <span class="nav-icon">📊</span>
+                        <span>Métricas y Gestión</span>
+                    </a>
+                </li>
+                <li id="itemConfiguracion">
+                    <a class="nav-link" onclick="navegar('/configuracion', this)">
+                        <span class="nav-icon">⚙️</span>
+                        <span>Configuración</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <div class="user-name" id="labelUsuario">Usuario</div>
+                <div class="user-role" id="labelRol">Operador</div>
+            </div>
+            <a href="/api/auth/logout" class="btn-logout">
+                <span>🚪</span>
+                <span>Cerrar Sesión</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- CONTENIDO EMBEBIDO / VISTA ACTIVA -->
+    <main class="main-content">
+        <iframe id="frameContenido" src="/dashboard"></iframe>
+    </main>
+
+    <script>
+        function navegar(url, elemento) {
+            document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+            elemento.classList.add('active');
+            document.getElementById('frameContenido').src = url;
+        }
+
+        // Obtener datos del usuario en sesión y restringir accesos visibles
+        async function cargarSesion() {
+            try {
+                const res = await fetch('/api/auth/me');
+                if (res.ok) {
+                    const user = await res.json();
+                    document.getElementById('labelUsuario').innerText = user.nombre || user.username;
+                    document.getElementById('labelRol').innerText = `Rol: ${user.rol}`;
+
+                    // Restricciones de menú según rol
+                    if (user.rol === 'balanza') {
+                        document.getElementById('itemGestion').style.display = 'none';
+                        document.getElementById('itemConfiguracion').style.display = 'none';
+                    } else if (user.rol === 'planta') {
+                        document.getElementById('itemConfiguracion').style.display = 'none';
+                    }
+                }
+            } catch (e) {}
+        }
+
+        cargarSesion();
+    </script>
+</body>
+</html>

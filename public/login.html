@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso al Sistema - Balanza</title>
+    <style>
+        :root {
+            --bg-dark: #090d16;
+            --card-bg: #151f32;
+            --card-border: #23334d;
+            --primary-blue: #2563eb;
+            --primary-blue-hover: #1d4ed8;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --danger-red: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .login-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 32px 28px;
+            width: 100%;
+            max-width: 380px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 22px;
+        }
+
+        .login-header h1 {
+            font-size: 1.35rem;
+            color: #60a5fa;
+            font-weight: 700;
+        }
+
+        .login-header p {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 6px;
+            letter-spacing: 0.5px;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .form-input {
+            width: 100%;
+            background: #090d16;
+            border: 1px solid var(--card-border);
+            color: #fff;
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+
+        .form-input:focus {
+            border-color: #3b82f6;
+        }
+
+        .form-input.has-toggle {
+            padding-right: 40px;
+        }
+
+        .btn-toggle-eye {
+            position: absolute;
+            right: 10px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            user-select: none;
+            transition: color 0.15s;
+        }
+
+        .btn-toggle-eye:hover {
+            color: #f1f5f9;
+        }
+
+        .btn-login {
+            width: 100%;
+            background: var(--primary-blue);
+            color: #fff;
+            border: none;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.88rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: background 0.15s;
+            margin-top: 6px;
+        }
+
+        .btn-login:hover {
+            background: var(--primary-blue-hover);
+        }
+
+        .login-footer {
+            margin-top: 18px;
+            text-align: center;
+        }
+
+        .login-footer a {
+            color: #60a5fa;
+            font-size: 0.78rem;
+            text-decoration: none;
+        }
+
+        .login-footer a:hover {
+            text-decoration: underline;
+        }
+
+        .error-msg {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid var(--danger-red);
+            color: #fca5a5;
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            margin-bottom: 14px;
+            display: none;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="login-card">
+        <div class="login-header">
+            <h1>⚖️ Balanza de Planta</h1>
+            <p>Ingreso de Operadores y Administración</p>
+        </div>
+
+        <div id="errorMsg" class="error-msg"></div>
+
+        <form id="loginForm" onsubmit="ejecutarLogin(event)">
+            <div class="form-group">
+                <label>Usuario</label>
+                <input type="text" id="username" class="form-input" required autocomplete="username">
+            </div>
+
+            <div class="form-group">
+                <label>Contraseña</label>
+                <div class="input-wrapper">
+                    <input type="password" id="password" class="form-input has-toggle" required autocomplete="current-password">
+                    <button type="button" class="btn-toggle-eye" onclick="togglePasswordVisibility()" id="btnEye" title="Mostrar contraseña">👁️</button>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-login" id="btnLogin">Ingresar</button>
+        </form>
+
+        <div class="login-footer">
+            <a href="/recuperar">¿Olvidó su contraseña?</a>
+        </div>
+    </div>
+
+    <script>
+        function togglePasswordVisibility() {
+            const passInput = document.getElementById('password');
+            const btnEye = document.getElementById('btnEye');
+            if (passInput.type === 'password') {
+                passInput.type = 'text';
+                btnEye.innerText = '🙈';
+                btnEye.title = 'Ocultar contraseña';
+            } else {
+                passInput.type = 'password';
+                btnEye.innerText = '👁️';
+                btnEye.title = 'Mostrar contraseña';
+            }
+        }
+
+        async function ejecutarLogin(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnLogin');
+            const errorMsg = document.getElementById('errorMsg');
+            errorMsg.style.display = 'none';
+            btn.disabled = true;
+            btn.innerText = 'Verificando...';
+
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await res.json();
+
+                if (data.success) {
+                    window.location.href = '/menu';
+                } else {
+                    errorMsg.innerText = data.message || 'Usuario o contraseña incorrectos.';
+                    errorMsg.style.display = 'block';
+                }
+            } catch (err) {
+                errorMsg.innerText = 'Error de conexión con el servidor.';
+                errorMsg.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'Ingresar';
+            }
+        }
+    </script>
+</body>
+</html>

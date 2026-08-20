@@ -19,6 +19,7 @@
             --success-hover: #15803d;
             --warning-amber: #d97706;
             --danger-red: #ef4444;
+            --danger-hover: #dc2626;
         }
 
         * {
@@ -306,164 +307,215 @@
             background: rgba(74, 222, 128, 0.1);
             border-radius: 8px;
             padding: 10px;
-            margin-bottom: 18px;
+            margin-bottom: 16px;
             line-height: 1.3;
+        }
+
+        .btn-salir-app {
+            background-color: var(--danger-red);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 12px;
+            font-size: 0.92rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: background-color 0.2s;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-salir-app:hover {
+            background-color: var(--danger-hover);
+        }
+
+        /* PANTALLA FINAL DE SALIDA */
+        #vistaSalida {
+            display: none;
+            text-align: center;
+            padding: 10px 0;
+        }
+
+        .qr-placeholder-icon {
+            font-size: 3.5rem;
+            margin-bottom: 14px;
+            color: #60a5fa;
         }
     </style>
 </head>
 <body>
 
     <div class="wizard-container">
-        <div class="wizard-header">
-            <h1>Turno Balanza</h1>
-            <p id="subtituloPaso">Paso 1 de 4: Tipo de Operación</p>
-        </div>
-
-        <!-- PASO 1: CARGA O DESCARGA -->
-        <div class="step-panel active" id="step1">
-            <div class="step-title">Seleccione el Tipo de Operación</div>
-            <div class="grid-buttons">
-                <button class="btn-option" onclick="seleccionarOperacion('DESCARGA')">📥 Descarga (Ingreso)</button>
-                <button class="btn-option" onclick="seleccionarOperacion('CARGA')">📤 Carga (Salida)</button>
-            </div>
-        </div>
-
-        <!-- PASO 2: GRANOS O MATERIA PRIMA -->
-        <div class="step-panel" id="step2">
-            <div class="step-title">Seleccione el Rubro</div>
-            <div class="grid-buttons">
-                <button class="btn-option" onclick="seleccionarRubro('GRANOS')">🌾 Granos / Cereales</button>
-                <button class="btn-option" onclick="seleccionarRubro('MATERIA_PRIMA')">📦 Materia Prima / Insumos</button>
-            </div>
-            <div class="nav-buttons">
-                <button class="btn-secondary" onclick="irAlPaso(1)">← Volver</button>
-            </div>
-        </div>
-
-        <!-- PASO 3: CARTA DE PORTE O REMITO -->
-        <div class="step-panel" id="step3">
-            <div class="step-title">Documento de Ingreso</div>
-            <div class="grid-buttons">
-                <button class="btn-option" onclick="seleccionarDocumento('CARTA_DE_PORTE')">📄 Carta de Porte (CPE)</button>
-                <button class="btn-option" onclick="seleccionarDocumento('REMITO')">📋 Remito</button>
-            </div>
-            <div class="nav-buttons">
-                <button class="btn-secondary" onclick="irAlPaso(2)">← Volver</button>
-            </div>
-        </div>
-
-        <!-- PASO 4A: FORMULARIO CARTA DE PORTE (CPE) -->
-        <form class="step-panel" id="step4_cpe" onsubmit="registrarTurno(event)">
-            <div class="step-title">Datos de Carta de Porte</div>
-
-            <div id="reader"></div>
-
-            <button type="button" class="btn-scan" id="btnStartScan" onclick="iniciarEscaneoQR()">📷 Escanear QR con la Cámara</button>
-
-            <!-- ADJUNTO DIGITAL CPE -->
-            <div class="form-group">
-                <label>📎 Adjuntar Archivo de Carta de Porte (PDF / JPG / PNG)</label>
-                <input type="file" id="cpe_archivo" accept=".pdf, .jpg, .jpeg, .png, application/pdf" onchange="procesarArchivoAdjunto(this)">
+        
+        <!-- CONTENIDO PRINCIPAL DEL WIZARD -->
+        <div id="contenedorWizard">
+            <div class="wizard-header">
+                <h1>Turno Balanza</h1>
+                <p id="subtituloPaso">Paso 1 de 4: Tipo de Operación</p>
             </div>
 
-            <div class="form-group">
-                <label>N° Carta de Porte / CTG *</label>
-                <div style="display: flex; gap: 8px;">
-                    <input type="text" id="cpe_ctg" placeholder="Ej: 10134080762" required>
-                    <button type="button" class="btn-afip" id="btnAfip" onclick="consultarAfipDirecto()">🌐 ARCA / AFIP</button>
+            <!-- PASO 1: CARGA O DESCARGA -->
+            <div class="step-panel active" id="step1">
+                <div class="step-title">Seleccione el Tipo de Operación</div>
+                <div class="grid-buttons">
+                    <button class="btn-option" onclick="seleccionarOperacion('DESCARGA')">📥 Descarga (Ingreso)</button>
+                    <button class="btn-option" onclick="seleccionarOperacion('CARGA')">📤 Carga (Salida)</button>
                 </div>
             </div>
 
-            <div class="form-group">
-                <label>Grano / Producto</label>
-                <select id="cpe_producto">
-                    <option value="SOJA">Soja</option>
-                    <option value="GIRASOL">Girasol</option>
-                    <option value="MAIZ">Maíz</option>
-                    <option value="TRIGO">Trigo</option>
-                    <option value="CEBADA">Cebada</option>
-                    <option value="SORGO">Sorgo</option>
-                    <option value="OTRO">Otro</option>
-                </select>
+            <!-- PASO 2: GRANOS O MATERIA PRIMA -->
+            <div class="step-panel" id="step2">
+                <div class="step-title">Seleccione el Rubro</div>
+                <div class="grid-buttons">
+                    <button class="btn-option" onclick="seleccionarRubro('GRANOS')">🌾 Granos / Cereales</button>
+                    <button class="btn-option" onclick="seleccionarRubro('MATERIA_PRIMA')">📦 Materia Prima / Insumos</button>
+                </div>
+                <div class="nav-buttons">
+                    <button class="btn-secondary" onclick="irAlPaso(1)">← Volver</button>
+                </div>
             </div>
 
-            <div class="form-group">
-                <label>Patente Chasis *</label>
-                <input type="text" id="cpe_chasis" placeholder="Ej: AA123BB" required style="text-transform: uppercase;">
+            <!-- PASO 3: CARTA DE PORTE O REMITO -->
+            <div class="step-panel" id="step3">
+                <div class="step-title">Documento de Ingreso</div>
+                <div class="grid-buttons">
+                    <button class="btn-option" onclick="seleccionarDocumento('CARTA_DE_PORTE')">📄 Carta de Porte (CPE)</button>
+                    <button class="btn-option" onclick="seleccionarDocumento('REMITO')">📋 Remito</button>
+                </div>
+                <div class="nav-buttons">
+                    <button class="btn-secondary" onclick="irAlPaso(2)">← Volver</button>
+                </div>
             </div>
 
-            <div class="form-group">
-                <label>Patente Acoplado</label>
-                <input type="text" id="cpe_acoplado" placeholder="Ej: AB456CD" style="text-transform: uppercase;">
+            <!-- PASO 4A: FORMULARIO CARTA DE PORTE (CPE) -->
+            <form class="step-panel" id="step4_cpe" onsubmit="registrarTurno(event)">
+                <div class="step-title">Datos de Carta de Porte</div>
+
+                <div id="reader"></div>
+
+                <button type="button" class="btn-scan" id="btnStartScan" onclick="iniciarEscaneoQR()">📷 Escanear QR con la Cámara</button>
+
+                <!-- ADJUNTO DIGITAL CPE -->
+                <div class="form-group">
+                    <label>📎 Adjuntar Archivo de Carta de Porte (PDF / JPG / PNG)</label>
+                    <input type="file" id="cpe_archivo" accept=".pdf, .jpg, .jpeg, .png, application/pdf" onchange="procesarArchivoAdjunto(this)">
+                </div>
+
+                <div class="form-group">
+                    <label>N° Carta de Porte / CTG *</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="cpe_ctg" placeholder="Ej: 10134080762" required>
+                        <button type="button" class="btn-afip" id="btnAfip" onclick="consultarAfipDirecto()">🌐 ARCA / AFIP</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Grano / Producto</label>
+                    <select id="cpe_producto">
+                        <option value="SOJA">Soja</option>
+                        <option value="GIRASOL">Girasol</option>
+                        <option value="MAIZ">Maíz</option>
+                        <option value="TRIGO">Trigo</option>
+                        <option value="CEBADA">Cebada</option>
+                        <option value="SORGO">Sorgo</option>
+                        <option value="OTRO">Otro</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Patente Chasis *</label>
+                    <input type="text" id="cpe_chasis" placeholder="Ej: AA123BB" required style="text-transform: uppercase;">
+                </div>
+
+                <div class="form-group">
+                    <label>Patente Acoplado</label>
+                    <input type="text" id="cpe_acoplado" placeholder="Ej: AB456CD" style="text-transform: uppercase;">
+                </div>
+
+                <div class="form-group">
+                    <label>Nombre y Apellido Chofer *</label>
+                    <input type="text" id="cpe_chofer" placeholder="Nombre del chofer" required>
+                </div>
+
+                <div class="form-group">
+                    <label>WhatsApp Chofer (para aviso de llamado) *</label>
+                    <input type="tel" id="cpe_telefono" placeholder="Ej: 2314487449" required>
+                </div>
+
+                <button type="submit" class="btn-submit" id="btnSubmitCpe">Confirmar y Solicitar Turno</button>
+
+                <div class="nav-buttons">
+                    <button type="button" class="btn-secondary" onclick="irAlPaso(3)">← Volver</button>
+                </div>
+            </form>
+
+            <!-- PASO 4B: FORMULARIO REMITO -->
+            <form class="step-panel" id="step4_remito" onsubmit="registrarTurno(event)">
+                <div class="step-title">Datos del Remito</div>
+
+                <div class="form-group">
+                    <label>📎 Adjuntar Archivo de Remito (PDF / JPG / PNG)</label>
+                    <input type="file" id="rem_archivo" accept=".pdf, .jpg, .jpeg, .png, application/pdf">
+                </div>
+
+                <div class="form-group">
+                    <label>Empresa / Proveedor *</label>
+                    <input type="text" id="rem_empresa" placeholder="Ej: Agroservicios S.A." required>
+                </div>
+
+                <div class="form-group">
+                    <label>Producto que Transporta *</label>
+                    <input type="text" id="rem_producto" placeholder="Ej: Fertilizante Liquido / Insumos" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Origen de la Carga *</label>
+                    <input type="text" id="rem_origen" placeholder="Ej: Necochea / Planta Central" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Patente Chasis *</label>
+                    <input type="text" id="rem_chasis" placeholder="Ej: AA123BB" required style="text-transform: uppercase;">
+                </div>
+
+                <div class="form-group">
+                    <label>Patente Acoplado</label>
+                    <input type="text" id="rem_acoplado" placeholder="Ej: AB456CD" style="text-transform: uppercase;">
+                </div>
+
+                <div class="form-group">
+                    <label>Nombre Completo Chofer *</label>
+                    <input type="text" id="rem_chofer" placeholder="Nombre completo del conductor" required>
+                </div>
+
+                <div class="form-group">
+                    <label>WhatsApp Chofer *</label>
+                    <input type="tel" id="rem_telefono" placeholder="Ej: 2314487449" required>
+                </div>
+
+                <button type="submit" class="btn-submit" id="btnSubmitRem">Confirmar y Solicitar Turno</button>
+
+                <div class="nav-buttons">
+                    <button type="button" class="btn-secondary" onclick="irAlPaso(3)">← Volver</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- PANTALLA FINAL DE SALIDA -->
+        <div id="vistaSalida">
+            <div class="qr-placeholder-icon">📱</div>
+            <h2 style="font-size: 1.3rem; color: #60a5fa; margin-bottom: 10px; font-weight: 700;">Sesión Finalizada</h2>
+            <p style="font-size: 0.9rem; color: #cbd5e1; line-height: 1.6; margin-bottom: 16px;">
+                Su turno ya se encuentra registrado en el sistema. Aguarde en playa a ser llamado por WhatsApp o pantalla.
+            </p>
+            <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid var(--card-border); border-radius: 10px; padding: 14px; color: var(--text-muted); font-size: 0.82rem;">
+                ℹ️ Si necesita registrar un nuevo turno o ingresar otro camión, por favor <b>vuelva a escanear el código QR</b> ubicado en la portería.
             </div>
-
-            <div class="form-group">
-                <label>Nombre y Apellido Chofer *</label>
-                <input type="text" id="cpe_chofer" placeholder="Nombre del chofer" required>
-            </div>
-
-            <div class="form-group">
-                <label>WhatsApp Chofer (para aviso de llamado) *</label>
-                <input type="tel" id="cpe_telefono" placeholder="Ej: 2314487449" required>
-            </div>
-
-            <button type="submit" class="btn-submit">Confirmar y Solicitar Turno</button>
-
-            <div class="nav-buttons">
-                <button type="button" class="btn-secondary" onclick="irAlPaso(3)">← Volver</button>
-            </div>
-        </form>
-
-        <!-- PASO 4B: FORMULARIO REMITO -->
-        <form class="step-panel" id="step4_remito" onsubmit="registrarTurno(event)">
-            <div class="step-title">Datos del Remito</div>
-
-            <div class="form-group">
-                <label>📎 Adjuntar Archivo de Remito (PDF / JPG / PNG)</label>
-                <input type="file" id="rem_archivo" accept=".pdf, .jpg, .jpeg, .png, application/pdf">
-            </div>
-
-            <div class="form-group">
-                <label>Empresa / Proveedor *</label>
-                <input type="text" id="rem_empresa" placeholder="Ej: Agroservicios S.A." required>
-            </div>
-
-            <div class="form-group">
-                <label>Producto que Transporta *</label>
-                <input type="text" id="rem_producto" placeholder="Ej: Fertilizante Liquido / Insumos" required>
-            </div>
-
-            <div class="form-group">
-                <label>Origen de la Carga *</label>
-                <input type="text" id="rem_origen" placeholder="Ej: Necochea / Planta Central" required>
-            </div>
-
-            <div class="form-group">
-                <label>Patente Chasis *</label>
-                <input type="text" id="rem_chasis" placeholder="Ej: AA123BB" required style="text-transform: uppercase;">
-            </div>
-
-            <div class="form-group">
-                <label>Patente Acoplado</label>
-                <input type="text" id="rem_acoplado" placeholder="Ej: AB456CD" style="text-transform: uppercase;">
-            </div>
-
-            <div class="form-group">
-                <label>Nombre Completo Chofer *</label>
-                <input type="text" id="rem_chofer" placeholder="Nombre completo del conductor" required>
-            </div>
-
-            <div class="form-group">
-                <label>WhatsApp Chofer *</label>
-                <input type="tel" id="rem_telefono" placeholder="Ej: 2314487449" required>
-            </div>
-
-            <button type="submit" class="btn-submit">Confirmar y Solicitar Turno</button>
-
-            <div class="nav-buttons">
-                <button type="button" class="btn-secondary" onclick="irAlPaso(3)">← Volver</button>
-            </div>
-        </form>
+        </div>
 
     </div>
 
@@ -486,7 +538,9 @@
                 📲 Se envió la confirmación a su WhatsApp. Lo notificaremos por ese medio cuando corresponda avanzar.
             </div>
 
-            <button class="btn-submit" style="width: 100%;" onclick="window.location.reload()">Entendido / Nuevo Registro</button>
+            <button class="btn-salir-app" onclick="salirDeLaAplicacion()">
+                🚪 Salir de la Aplicación
+            </button>
         </div>
     </div>
 
@@ -666,6 +720,11 @@
         async function registrarTurno(event) {
             event.preventDefault();
 
+            const btnCpe = document.getElementById('btnSubmitCpe');
+            const btnRem = document.getElementById('btnSubmitRem');
+            if (btnCpe) btnCpe.disabled = true;
+            if (btnRem) btnRem.disabled = true;
+
             const formData = new FormData();
             formData.append('tipo_operacion', datosSolicitud.tipo_operacion);
             formData.append('tipo_documento', datosSolicitud.tipo_documento);
@@ -717,10 +776,28 @@
                     document.getElementById('modalTicket').classList.add('active');
                 } else {
                     alert("Error al registrar el turno: " + (data.message || 'Intente nuevamente.'));
+                    if (btnCpe) btnCpe.disabled = false;
+                    if (btnRem) btnRem.disabled = false;
                 }
             } catch (err) {
                 console.error(err);
                 alert("Error de conexión al servidor.");
+                if (btnCpe) btnCpe.disabled = false;
+                if (btnRem) btnRem.disabled = false;
+            }
+        }
+
+        // Salir de la aplicación y bloquear retorno sin nuevo QR
+        function salirDeLaAplicacion() {
+            document.getElementById('modalTicket').classList.remove('active');
+            document.getElementById('contenedorWizard').style.display = 'none';
+            document.getElementById('vistaSalida').style.display = 'block';
+
+            if (window.history && window.history.pushState) {
+                window.history.pushState(null, null, window.location.href);
+                window.onpopstate = function () {
+                    window.history.pushState(null, null, window.location.href);
+                };
             }
         }
     </script>

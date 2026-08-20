@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuración y Seguridad - Balanza</title>
+    <style>
+        :root {
+            --bg-dark: #090d16;
+            --card-bg: #151f32;
+            --card-border: #23334d;
+            --primary-blue: #2563eb;
+            --primary-blue-hover: #1d4ed8;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --success-green: #16a34a;
+            --danger-red: #ef4444;
+            --warning-amber: #d97706;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--card-border);
+            margin-bottom: 20px;
+        }
+
+        .header-title h1 {
+            font-size: 1.35rem;
+            color: #60a5fa;
+            font-weight: 700;
+        }
+
+        /* GRID PRINCIPAL */
+        .layout-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.4fr;
+            gap: 20px;
+        }
+
+        .full-row {
+            grid-column: 1 / -1;
+        }
+
+        .panel {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1.05rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 10px;
+            color: #93c5fd;
+        }
+
+        .btn-action {
+            padding: 7px 13px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-transform: uppercase;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: background 0.15s;
+        }
+
+        .btn-blue { background: var(--primary-blue); color: white; }
+        .btn-blue:hover { background: var(--primary-blue-hover); }
+
+        .btn-edit-toggle { background: #334155; color: #f1f5f9; border: 1px solid var(--card-border); }
+        .btn-edit-toggle:hover { background: #475569; }
+
+        .btn-test { background: var(--warning-amber); color: white; }
+        .btn-test:hover { background: #b45309; }
+
+        .form-group { margin-bottom: 13px; }
+        .form-group label {
+            display: block;
+            font-size: 0.73rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+            letter-spacing: 0.5px;
+        }
+
+        .form-input {
+            width: 100%;
+            background: #090d16;
+            border: 1px solid var(--card-border);
+            color: #fff;
+            padding: 9px 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            outline: none;
+            transition: border-color 0.15s, background-color 0.15s;
+        }
+        .form-input:focus { border-color: #3b82f6; }
+        .form-input:disabled {
+            background-color: rgba(15, 23, 42, 0.5);
+            color: #94a3b8;
+            cursor: not-allowed;
+            border-color: #1e293b;
+        }
+
+        .feedback-msg {
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            margin-bottom: 14px;
+            display: none;
+            text-align: center;
+        }
+        .msg-ok { background: rgba(22, 163, 74, 0.2); border: 1px solid var(--success-green); color: #86efac; }
+        .msg-err { background: rgba(239, 68, 68, 0.2); border: 1px solid var(--danger-red); color: #fca5a5; }
+
+        /* TABLAS CRUD */
+        .table-responsive {
+            overflow-x: auto;
+            max-height: 400px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.82rem;
+            text-align: left;
+        }
+
+        th {
+            background: #0f172a;
+            color: var(--text-muted);
+            padding: 10px;
+            border-bottom: 1px solid var(--card-border);
+            text-transform: uppercase;
+            font-size: 0.72rem;
+            position: sticky;
+            top: 0;
+        }
+
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #1c283d;
+            color: #cbd5e1;
+        }
+
+        tr:hover td { background: #1a263e; }
+        tr.inactivo td { opacity: 0.5; }
+
+        .badge {
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: 700;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            display: inline-block;
+        }
+        .badge-rol { background: rgba(37, 99, 235, 0.2); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.4); }
+        .badge-permiso { background: rgba(147, 51, 234, 0.2); color: #d8b4fe; margin-right: 4px; padding: 2px 6px; font-size: 0.68rem; }
+        .badge-activo { background: rgba(22, 163, 74, 0.2); color: #86efac; }
+        .badge-inactivo { background: rgba(100, 116, 139, 0.2); color: #94a3b8; }
+
+        .actions-cell {
+            display: flex;
+            gap: 6px;
+            justify-content: flex-end;
+        }
+
+        .btn-table {
+            background: #1e293b;
+            border: 1px solid var(--card-border);
+            color: #cbd5e1;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .btn-table:hover { background: #334155; color: white; }
+        .btn-table-deact:hover { background: rgba(239, 68, 68, 0.2); color: #ef4444; border-color: #ef4444; }
+        .btn-table-act:hover { background: rgba(22, 163, 74, 0.2); color: #4ade80; border-color: #16a34a; }
+
+        /* MODALES */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 24px;
+            width: 100%;
+            max-width: 440px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: #090d16;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid var(--card-border);
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.82rem;
+            color: #cbd5e1;
+            cursor: pointer;
+        }
+
+        .checkbox-item input {
+            cursor: pointer;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 16px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-title">
+            <h1>⚙️ Configuración y Seguridad del Sistema</h1>
+        </div>
+    </header>
+
+    <div class="layout-grid">
+        
+        <!-- PANEL 1: SERVIDOR SMTP -->
+        <div class="panel">
+            <div class="panel-header">
+                <span>📧 Servidor de Correo Saliente (SMTP)</span>
+                <button type="button" class="btn-action btn-edit-toggle" id="btnToggleSmtp" onclick="toggleEdicionSmtp()">
+                    <span id="iconEditSmtp">✏️</span> <span id="textEditSmtp">Editar</span>
+                </button>
+            </div>
+            
+            <div id="msgSmtp" class="feedback-msg"></div>
+
+            <form id="formSmtp" onsubmit="guardarSmtp(event)">
+                <div class="form-group">
+                    <label>Servidor Host SMTP</label>
+                    <input type="text" id="smtpHost" class="form-input" disabled required>
+                </div>
+
+                <div style="display: flex; gap: 10px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label>Puerto</label>
+                        <input type="number" id="smtpPort" class="form-input" disabled required>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Seguridad</label>
+                        <select id="smtpSecure" class="form-input" disabled>
+                            <option value="true">SSL (Puerto 465)</option>
+                            <option value="false">TLS / STARTTLS (Puerto 587)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Usuario / Casilla Remitente</label>
+                    <input type="email" id="smtpUser" class="form-input" disabled required>
+                </div>
+
+                <div class="form-group">
+                    <label>Contraseña SMTP</label>
+                    <input type="password" id="smtpPass" class="form-input" disabled required>
+                </div>
+
+                <div class="form-group">
+                    <label>Nombre del Remitente (From)</label>
+                    <input type="text" id="smtpFrom" class="form-input" disabled>
+                </div>
+
+                <div id="smtpActionsBar" style="display: none; gap: 10px; margin-top: 16px;">
+                    <button type="submit" class="btn-action btn-blue" style="flex: 1;">💾 Guardar Cambios</button>
+                    <button type="button" class="btn-action btn-test" onclick="abrirModalTestSmtp()">🧪 Test Envío</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- PANEL 2: CRUD DE USUARIOS -->
+        <div class="panel">
+            <div class="panel-header">
+                <span>👥 Gestión de Usuarios</span>
+                <button class="btn-action btn-blue" onclick="abrirModalUsuario()">➕ Nuevo Usuario</button>
+            </div>
+
+            <div id="msgUser" class="feedback-msg"></div>
+
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Usuario</th>
+                            <th>Nombre</th>
+                            <th>Email</th>
+                            <th>Rol</th>
+                            <th>Estado</th>
+                            <th style="text-align: right;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaUsuariosBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- PANEL 3: CRUD DE ROLES Y MATRIZ DE PERMISOS -->
+        <div class="panel full-row">
+            <div class="panel-header">
+                <span>🛡️ Roles y Matriz de Accesos</span>
+                <button class="btn-action btn-blue" onclick="abrirModalRol()">➕ Nuevo Rol</button>
+            </div>
+
+            <div id="msgRol" class="feedback-msg"></div>
+
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Identificador</th>
+                            <th>Nombre del Rol</th>
+                            <th>Descripción</th>
+                            <th>Vistas y Accesos Asignados</th>
+                            <th style="text-align: right;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaRolesBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- MODAL TEST SMTP -->
+    <div class="modal-overlay" id="modalTestSmtpOverlay">
+        <div class="modal-card">
+            <h3 style="color: #60a5fa; margin-bottom: 8px; font-size: 1.15rem;">🧪 Prueba de Conexión SMTP</h3>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 16px;">
+                Se enviará un correo de verificación utilizando los parámetros configurados actualmente.
+            </p>
+
+            <div id="msgModalTest" class="feedback-msg"></div>
+
+            <form id="formTestSmtp" onsubmit="ejecutarTestSmtp(event)">
+                <div class="form-group">
+                    <label>Casilla de Correo de Destino</label>
+                    <input type="email" id="testEmailInput" class="form-input" required placeholder="ejemplo@edpagro.com.ar">
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-action btn-edit-toggle" onclick="cerrarModalTestSmtp()">Cancelar</button>
+                    <button type="submit" class="btn-action btn-blue" id="btnEnviarTest">Enviar Prueba</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL USUARIO -->
+    <div class="modal-overlay" id="modalUsuario">
+        <div class="modal-card">
+            <h3 id="modalUsuarioTitulo" style="color: #60a5fa; margin-bottom: 12px; font-size: 1.15rem;">Nuevo Usuario</h3>
+            
+            <div id="msgModalUser" class="feedback-msg"></div>
+
+            <form id="formUsuarioModal" onsubmit="guardarUsuarioModal(event)">
+                <input type="hidden" id="modalUserId">
+
+                <div class="form-group" id="groupUsername">
+                    <label>Nombre de Usuario</label>
+                    <input type="text" id="modalUsername" class="form-input" required autocomplete="off" oninput="this.value = this.value.toLowerCase().replace(/\s+/g, '')">
+                </div>
+
+                <div class="form-group">
+                    <label>Nombre y Apellido</label>
+                    <input type="text" id="modalNombre" class="form-input" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Correo Electrónico (Recuperación)</label>
+                    <input type="email" id="modalEmail" class="form-input" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Rol Asignado</label>
+                    <select id="modalUserRolSelect" class="form-input"></select>
+                </div>
+
+                <div class="form-group">
+                    <label id="lblModalPass">Contraseña</label>
+                    <input type="password" id="modalPass" class="form-input" placeholder="••••••••">
+                    <small id="helpModalPass" style="font-size: 0.72rem; color: var(--text-muted); display: none;">Dejar en blanco para mantener la clave actual.</small>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-action btn-edit-toggle" onclick="cerrarModalUsuario()">Cancelar</button>
+                    <button type="submit" class="btn-action btn-blue" id="btnGuardarUser">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL ROL Y PERMISOS -->
+    <div class="modal-overlay" id="modalRolOverlay">
+        <div class="modal-card">
+            <h3 id="modalRolTitulo" style="color: #60a5fa; margin-bottom: 12px; font-size: 1.15rem;">Nuevo Rol</h3>
+            
+            <div id="msgModalRol" class="feedback-msg"></div>
+
+            <form id="formRolModal" onsubmit="guardarRolModal(event)">
+                <input type="hidden" id="modalRolId">
+
+                <div class="form-group">
+                    <label>Código del Rol (Sin espacios)</label>
+                    <input type="text" id="modalRolCodigo" class="form-input" placeholder="ej: admin_sistemas" required autocomplete="off" oninput="this.value = this.value.toLowerCase().replace(/\s+/g, '_')">
+                </div>
+
+                <div class="form-group">
+                    <label>Nombre Visible</label>
+                    <input type="text" id="modalRolNombre" class="form-input" placeholder="ej: Administrador de Sistemas" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Descripción</label>
+                    <input type="text" id="modalRolDesc" class="form-input" placeholder="ej: Acceso total a mantenimiento y auditoría">
+                </div>
+
+                <div class="form-group">
+                    <label>Permisos de Módulos</label>
+                    <div class="checkbox-group">
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="perm_dashboard">
+                            <span>💻 <b>Panel de Balanza</b> (/dashboard)</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="perm_gestion">
+                            <span>📊 <b>Métricas y Gestión</b> (/gestion)</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="perm_configuracion">
+                            <span>⚙️ <b>Configuración y Usuarios</b> (/configuracion)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-action btn-edit-toggle" onclick="cerrarModalRol()">Cancelar</button>
+                    <button type="submit" class="btn-action btn-blue" id="btnGuardarRol">Guardar Rol</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let usuariosCargados = [];
+        let rolesCargados = [];
+        let modoEdicionSmtp = false;
+
+        // ==========================================
+        // 1. GESTIÓN SMTP
+        // ==========================================
+        async function cargarConfigSmtp() {
+            try {
+                const res = await fetch('/api/admin/config/smtp');
+                if (res.ok) {
+                    const cfg = await res.json();
+                    document.getElementById('smtpHost').value = cfg.host || '';
+                    document.getElementById('smtpPort').value = cfg.port || 465;
+                    document.getElementById('smtpSecure').value = String(cfg.secure);
+                    document.getElementById('smtpUser').value = cfg.user || '';
+                    document.getElementById('smtpPass').value = cfg.pass || '';
+                    document.getElementById('smtpFrom').value = cfg.from || '';
+                }
+            } catch (e) {
+                console.error("Error SMTP:", e);
+            }
+        }
+
+        function toggleEdicionSmtp() {
+            modoEdicionSmtp = !modoEdicionSmtp;
+            const campos = ['smtpHost', 'smtpPort', 'smtpSecure', 'smtpUser', 'smtpPass', 'smtpFrom'];
+            campos.forEach(id => document.getElementById(id).disabled = !modoEdicionSmtp);
+
+            const actionsBar = document.getElementById('smtpActionsBar');
+            const icon = document.getElementById('iconEditSmtp');
+            const txt = document.getElementById('textEditSmtp');
+
+            if (modoEdicionSmtp) {
+                actionsBar.style.display = 'flex';
+                icon.innerText = '✕';
+                txt.innerText = 'Cancelar';
+            } else {
+                actionsBar.style.display = 'none';
+                icon.innerText = '✏️';
+                txt.innerText = 'Editar';
+                cargarConfigSmtp();
+            }
+        }
+
+        async function guardarSmtp(e) {
+            e.preventDefault();
+            const msg = document.getElementById('msgSmtp');
+            const payload = {
+                host: document.getElementById('smtpHost').value.trim(),
+                port: parseInt(document.getElementById('smtpPort').value),
+                secure: document.getElementById('smtpSecure').value === 'true',
+                user: document.getElementById('smtpUser').value.trim(),
+                pass: document.getElementById('smtpPass').value,
+                from: document.getElementById('smtpFrom').value.trim()
+            };
+
+            try {
+                const res = await fetch('/api/admin/config/smtp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                msg.className = `feedback-msg ${data.success ? 'msg-ok' : 'msg-err'}`;
+                msg.innerText = data.message;
+                msg.style.display = 'block';
+                if (data.success) toggleEdicionSmtp();
+            } catch (err) {
+                msg.className = 'feedback-msg msg-err';
+                msg.innerText = 'Error al guardar los datos SMTP.';
+                msg.style.display = 'block';
+            }
+        }
+
+        function abrirModalTestSmtp() {
+            const userEmail = document.getElementById('smtpUser').value.trim();
+            document.getElementById('testEmailInput').value = userEmail;
+            document.getElementById('msgModalTest').style.display = 'none';
+            document.getElementById('modalTestSmtpOverlay').classList.add('active');
+        }
+
+        function cerrarModalTestSmtp() {
+            document.getElementById('modalTestSmtpOverlay').classList.remove('active');
+        }
+
+        async function ejecutarTestSmtp(e) {
+            e.preventDefault();
+            const emailPrueba = document.getElementById('testEmailInput').value.trim();
+            const msg = document.getElementById('msgModalTest');
+            const btn = document.getElementById('btnEnviarTest');
+
+            btn.disabled = true;
+            btn.innerText = 'Probando conexión...';
+            msg.style.display = 'none';
+
+            const payload = {
+                host: document.getElementById('smtpHost').value.trim(),
+                port: parseInt(document.getElementById('smtpPort').value),
+                secure: document.getElementById('smtpSecure').value === 'true',
+                user: document.getElementById('smtpUser').value.trim(),
+                pass: document.getElementById('smtpPass').value,
+                testEmail: emailPrueba
+            };
+
+            try {
+                const res = await fetch('/api/admin/test-smtp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                msg.className = `feedback-msg ${data.success ? 'msg-ok' : 'msg-err'}`;
+                msg.innerText = data.message;
+                msg.style.display = 'block';
+            } catch (err) {
+                msg.className = 'feedback-msg msg-err';
+                msg.innerText = 'Fallo de conexión al enviar correo de prueba.';
+                msg.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'Enviar Prueba';
+            }
+        }
+
+        // ==========================================
+        // 2. CRUD DE USUARIOS
+        // ==========================================
+        async function cargarUsuarios() {
+            try {
+                const res = await fetch('/api/admin/usuarios');
+                if (res.ok) {
+                    usuariosCargados = await res.json();
+                    renderizarTablaUsuarios();
+                }
+            } catch (e) {
+                console.error("Error usuarios:", e);
+            }
+        }
+
+        function renderizarTablaUsuarios() {
+            const tbody = document.getElementById('tablaUsuariosBody');
+            tbody.innerHTML = '';
+
+            usuariosCargados.forEach(u => {
+                const tr = document.createElement('tr');
+                if (!u.activo) tr.className = 'inactivo';
+
+                const estadoHtml = u.activo 
+                    ? '<span class="badge badge-activo">Activo</span>' 
+                    : '<span class="badge badge-inactivo">Desactivado</span>';
+
+                const btnToggleTexto = u.activo ? '⏸️ Desactivar' : '▶️ Reactivar';
+                const btnToggleClase = u.activo ? 'btn-table-deact' : 'btn-table-act';
+
+                tr.innerHTML = `
+                    <td style="font-weight: 700; color: #60a5fa;">${u.username}</td>
+                    <td>${u.nombre}</td>
+                    <td>${u.email}</td>
+                    <td><span class="badge badge-rol">${u.rol}</span></td>
+                    <td>${estadoHtml}</td>
+                    <td style="text-align: right;">
+                        <div class="actions-cell">
+                            <button class="btn-table" onclick="editarUsuario(${u.id})">✏️ Editar</button>
+                            <button class="btn-table ${btnToggleClase}" onclick="toggleEstadoUsuario(${u.id})">${btnToggleTexto}</button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function poblarSelectRoles() {
+            const select = document.getElementById('modalUserRolSelect');
+            select.innerHTML = '';
+            rolesCargados.forEach(r => {
+                const opt = document.createElement('option');
+                opt.value = r.codigo;
+                opt.innerText = `${r.nombre} (${r.codigo})`;
+                select.appendChild(opt);
+            });
+        }
+
+        function abrirModalUsuario() {
+            poblarSelectRoles();
+            document.getElementById('modalUserId').value = '';
+            document.getElementById('modalUsuarioTitulo').innerText = 'Nuevo Usuario';
+            document.getElementById('modalUsername').value = '';
+            document.getElementById('modalUsername').disabled = false;
+            document.getElementById('modalNombre').value = '';
+            document.getElementById('modalEmail').value = '';
+            document.getElementById('modalPass').value = '';
+            document.getElementById('modalPass').required = true;
+            document.getElementById('lblModalPass').innerText = 'Contraseña *';
+            document.getElementById('helpModalPass').style.display = 'none';
+            document.getElementById('msgModalUser').style.display = 'none';
+
+            document.getElementById('modalUsuario').classList.add('active');
+        }
+
+        function editarUsuario(id) {
+            poblarSelectRoles();
+            const user = usuariosCargados.find(u => u.id === id);
+            if (!user) return;
+
+            document.getElementById('modalUserId').value = user.id;
+            document.getElementById('modalUsuarioTitulo').innerText = `Editar Usuario: ${user.username}`;
+            document.getElementById('modalUsername').value = user.username;
+            document.getElementById('modalUsername').disabled = true;
+            document.getElementById('modalNombre').value = user.nombre;
+            document.getElementById('modalEmail').value = user.email;
+            document.getElementById('modalUserRolSelect').value = user.rol;
+            document.getElementById('modalPass').value = '';
+            document.getElementById('modalPass').required = false;
+            document.getElementById('lblModalPass').innerText = 'Nueva Contraseña (Opcional)';
+            document.getElementById('helpModalPass').style.display = 'block';
+            document.getElementById('msgModalUser').style.display = 'none';
+
+            document.getElementById('modalUsuario').classList.add('active');
+        }
+
+        function cerrarModalUsuario() {
+            document.getElementById('modalUsuario').classList.remove('active');
+        }
+
+        async function guardarUsuarioModal(e) {
+            e.preventDefault();
+            const id = document.getElementById('modalUserId').value;
+            const btn = document.getElementById('btnGuardarUser');
+            const msg = document.getElementById('msgModalUser');
+
+            btn.disabled = true;
+            msg.style.display = 'none';
+
+            const payload = {
+                nombre: document.getElementById('modalNombre').value.trim(),
+                email: document.getElementById('modalEmail').value.trim(),
+                rol: document.getElementById('modalUserRolSelect').value,
+                password: document.getElementById('modalPass').value
+            };
+
+            try {
+                let res;
+                if (id) {
+                    res = await fetch(`/api/admin/usuarios/${id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                } else {
+                    payload.username = document.getElementById('modalUsername').value.trim().toLowerCase().replace(/\s+/g, '');
+                    res = await fetch('/api/admin/usuarios', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                }
+
+                const data = await res.json();
+                if (data.success) {
+                    cerrarModalUsuario();
+                    cargarUsuarios();
+                } else {
+                    msg.className = 'feedback-msg msg-err';
+                    msg.innerText = data.message || 'Error al guardar el usuario.';
+                    msg.style.display = 'block';
+                }
+            } catch (err) {
+                msg.className = 'feedback-msg msg-err';
+                msg.innerText = 'Error de comunicación con el servidor.';
+                msg.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function toggleEstadoUsuario(id) {
+            const user = usuariosCargados.find(u => u.id === id);
+            if (!user) return;
+            const accion = user.activo ? 'desactivar' : 'reactivar';
+            if (!confirm(`¿Desea ${accion} el acceso de "${user.username}"?`)) return;
+
+            try {
+                const res = await fetch(`/api/admin/usuarios/${id}/toggle-estado`, { method: 'PATCH' });
+                const data = await res.json();
+                if (data.success) {
+                    cargarUsuarios();
+                } else {
+                    alert(data.message || 'No se pudo cambiar el estado.');
+                }
+            } catch (e) {
+                alert('Error al comunicar con el servidor.');
+            }
+        }
+
+        // ==========================================
+        // 3. CRUD DE ROLES Y MATRIZ DE PERMISOS
+        // ==========================================
+        async function cargarRoles() {
+            try {
+                const res = await fetch('/api/admin/roles');
+                if (res.ok) {
+                    rolesCargados = await res.json();
+                    renderizarTablaRoles();
+                }
+            } catch (e) {
+                console.error("Error roles:", e);
+            }
+        }
+
+        function renderizarTablaRoles() {
+            const tbody = document.getElementById('tablaRolesBody');
+            tbody.innerHTML = '';
+
+            rolesCargados.forEach(r => {
+                const tr = document.createElement('tr');
+                const permisosBadges = (r.permisos || []).map(p => `<span class="badge badge-permiso">${p}</span>`).join('') || '<span style="color:#64748b;">Sin accesos</span>';
+
+                tr.innerHTML = `
+                    <td style="font-weight: 700; color: #38bdf8;">${r.codigo}</td>
+                    <td style="font-weight: 600;">${r.nombre}</td>
+                    <td style="font-size: 0.78rem; color: var(--text-muted);">${r.descripcion || '--'}</td>
+                    <td>${permisosBadges}</td>
+                    <td style="text-align: right;">
+                        <div class="actions-cell">
+                            <button class="btn-table" onclick="editarRol('${r.codigo}')">✏️ Editar Permisos</button>
+                            ${r.codigo !== 'admin' ? `<button class="btn-table btn-table-deact" onclick="eliminarRol('${r.codigo}')">🗑️</button>` : ''}
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function abrirModalRol() {
+            document.getElementById('modalRolId').value = '';
+            document.getElementById('modalRolTitulo').innerText = 'Nuevo Rol';
+            document.getElementById('modalRolCodigo').value = '';
+            document.getElementById('modalRolCodigo').disabled = false;
+            document.getElementById('modalRolNombre').value = '';
+            document.getElementById('modalRolDesc').value = '';
+            document.getElementById('perm_dashboard').checked = true;
+            document.getElementById('perm_gestion').checked = false;
+            document.getElementById('perm_configuracion').checked = false;
+            document.getElementById('msgModalRol').style.display = 'none';
+
+            document.getElementById('modalRolOverlay').classList.add('active');
+        }
+
+        function editarRol(codigo) {
+            const rol = rolesCargados.find(r => r.codigo === codigo);
+            if (!rol) return;
+
+            document.getElementById('modalRolId').value = rol.codigo;
+            document.getElementById('modalRolTitulo').innerText = `Editar Rol: ${rol.nombre}`;
+            document.getElementById('modalRolCodigo').value = rol.codigo;
+            document.getElementById('modalRolCodigo').disabled = true;
+            document.getElementById('modalRolNombre').value = rol.nombre;
+            document.getElementById('modalRolDesc').value = rol.descripcion || '';
+
+            const perms = rol.permisos || [];
+            document.getElementById('perm_dashboard').checked = perms.includes('dashboard');
+            document.getElementById('perm_gestion').checked = perms.includes('gestion');
+            document.getElementById('perm_configuracion').checked = perms.includes('configuracion');
+            document.getElementById('msgModalRol').style.display = 'none';
+
+            document.getElementById('modalRolOverlay').classList.add('active');
+        }
+
+        function cerrarModalRol() {
+            document.getElementById('modalRolOverlay').classList.remove('active');
+        }
+
+        async function guardarRolModal(e) {
+            e.preventDefault();
+            const id = document.getElementById('modalRolId').value;
+            const btn = document.getElementById('btnGuardarRol');
+            const msg = document.getElementById('msgModalRol');
+
+            btn.disabled = true;
+            msg.style.display = 'none';
+
+            const permisosSeleccionados = [];
+            if (document.getElementById('perm_dashboard').checked) permisosSeleccionados.push('dashboard');
+            if (document.getElementById('perm_gestion').checked) permisosSeleccionados.push('gestion');
+            if (document.getElementById('perm_configuracion').checked) permisosSeleccionados.push('configuracion');
+
+            const codigoLimpio = document.getElementById('modalRolCodigo').value.trim().toLowerCase().replace(/\s+/g, '_');
+            const payload = {
+                nombre: document.getElementById('modalRolNombre').value.trim(),
+                descripcion: document.getElementById('modalRolDesc').value.trim(),
+                permisos: permisosSeleccionados
+            };
+
+            try {
+                let res;
+                if (id) {
+                    res = await fetch(`/api/admin/roles/${id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                } else {
+                    payload.codigo = codigoLimpio;
+                    res = await fetch('/api/admin/roles', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                }
+
+                const data = await res.json();
+                if (data.success) {
+                    cerrarModalRol();
+                    await cargarRoles();
+                } else {
+                    msg.className = 'feedback-msg msg-err';
+                    msg.innerText = data.message || 'Error al guardar el rol.';
+                    msg.style.display = 'block';
+                }
+            } catch (err) {
+                msg.className = 'feedback-msg msg-err';
+                msg.innerText = 'Error al comunicar con el servidor.';
+                msg.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function eliminarRol(codigo) {
+            if (!confirm(`¿Eliminar el rol "${codigo}"? Los usuarios que lo tengan perderán permisos asociados.`)) return;
+
+            try {
+                const res = await fetch(`/api/admin/roles/${codigo}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.success) {
+                    await cargarRoles();
+                } else {
+                    alert(data.message || 'No se pudo eliminar el rol.');
+                }
+            } catch (e) {
+                alert('Error al comunicar con el servidor.');
+            }
+        }
+
+        // Inicialización
+        cargarConfigSmtp();
+        cargarRoles().then(() => cargarUsuarios());
+    </script>
+</body>
+</html>

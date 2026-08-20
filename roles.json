@@ -1,0 +1,29 @@
+[
+  {
+    "codigo": "admin",
+    "nombre": "Administrador",
+    "descripcion": "Acceso total a módulos y configuración",
+    "permisos": [
+      "dashboard",
+      "gestion",
+      "configuracion"
+    ]
+  },
+  {
+    "codigo": "balanza",
+    "nombre": "Operador de Balanza",
+    "descripcion": "Operación de pesaje en tiempo real",
+    "permisos": [
+      "dashboard"
+    ]
+  },
+  {
+    "codigo": "planta",
+    "nombre": "Supervisión de Planta",
+    "descripcion": "Control de pesaje y analítica operativa",
+    "permisos": [
+      "dashboard",
+      "gestion"
+    ]
+  }
+]
